@@ -8,7 +8,7 @@ Created on Fri Aug 27 15:21:08 2021
 #from ponyge2_adapted_files import Grammar, Individual, initialisation_PI_Grow, crossover_onepoint, mutation_int_flip_per_codon
 from ponyge2_adapted_files import Grammar, ge
 import algorithms
-from functions import add, sub, mul, pdiv, neg
+from functions import add, sub, mul, pdiv, neg, and_, or_, not_, less_than_or_equal, greater_than_or_equal
 
 from os import path
 import pandas as pd
@@ -19,7 +19,7 @@ import random
 from sklearn.model_selection import train_test_split
 
 MAX_INIT_TREE_DEPTH = 10
-MIN_INIT_TREE_DEPTH = 1
+MIN_INIT_TREE_DEPTH = 2
 MAX_TREE_DEPTH = 17
 MAX_WRAPS = 0
 CODON_SIZE = 255
@@ -28,10 +28,10 @@ POPULATION_SIZE = 1000
 ELITE_SIZE = round(0.01*POPULATION_SIZE)
 P_CROSSOVER = 0.8 # probability for crossover
 P_MUTATION = 0.01  # probability for mutating an individual
-MAX_GENERATIONS = 50
+MAX_GENERATIONS = 500
 HALL_OF_FAME_SIZE = 1
 
-problem = 'spambase'
+problem = 'heartDisease'
 
 if problem == 'spambase':
     #There 1813 samples with class 1
@@ -52,6 +52,46 @@ if problem == 'spambase':
     X_test = np.transpose(X_test)
         
     GRAMMAR_FILE = 'spambase.bnf'
+
+if problem == 'heartDisease':
+    #There are 297 samples
+    #We'll split into 70% for training and 30% for test, assuring the balanced data
+    #X = np.zeros([297, 13], dtype=float)
+    #Y = np.zeros([297,], dtype=int)
+    
+    data =  pd.read_csv(r"datasets/processed.cleveland.data", sep=",")
+    #There are some data missing on columns d11 and d12, so let's remove the rows
+    data = data[data.ca != '?']
+    data = data[data.thal != '?']
+    
+    #There are 160 samples with class 0, 54 with class 1, 35 with class 2,
+    #35 with class 3 and 13 with class 4
+    #Let's consider the class 0 and all the remaining as class 1
+    Y = data['class'].to_numpy()
+    for i in range(len(Y)):
+        Y[i] = 1 if Y[i] > 0 else 0
+    data = data.drop(['class'], axis=1)
+    
+    data.loc[:, ['age', 'trestbps', 'chol', 'thalach', 'oldpeak']] = (data.loc[:, ['age', 'trestbps', 'chol', 'thalach', 'oldpeak']] - data.loc[:, ['age', 'trestbps', 'chol', 'thalach', 'oldpeak']].mean())/data.loc[:, ['age', 'trestbps', 'chol', 'thalach', 'oldpeak']].std()
+    
+    
+    data = pd.get_dummies(data, columns=['cp', 'restecg', 'slope', 'ca', 'thal'])#, prefix = ['cp']) = pd.get_dummies(data, columns=['cp', 'restecg', 'slope', 'ca', 'thal'])#, prefix = ['cp'])
+    
+    X = data.to_numpy()
+
+
+
+
+    
+
+    
+        
+    X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.3, random_state=42)
+    
+    X_train = np.transpose(X_train)
+    X_test = np.transpose(X_test)
+        
+    GRAMMAR_FILE = 'heartDisease.bnf'
 
 BNF_GRAMMAR = Grammar(path.join("grammars", GRAMMAR_FILE))
 

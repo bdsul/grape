@@ -1187,16 +1187,15 @@ def pi_grow(tree, max_depth, bnf_grammar, codon_size):
         
         # Find the productions possible from the current root.
         productions = bnf_grammar.rules[node.root]
-
+        
         # Set remaining depth.
         remaining_depth = max_depth - node.depth
-
+        
         if (overall_depth < max_depth) or \
                 (recursive and (not any([item[1] for item in queue]))):
             # We want to prevent the tree from creating terminals until a
             # single branch has reached the full depth. Only select recursive
             # choices.
-
             # Find which productions can be used based on the derivation method.
             available = legal_productions("full", remaining_depth, node.root,
                                           productions['choices'], bnf_grammar)

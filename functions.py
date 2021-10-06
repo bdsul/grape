@@ -96,3 +96,9 @@ def nand_(a, b):
 
 def nor_(a, b):
     return np.logical_not(np.logical_or(a,b))
+
+def greater_than_or_equal(a, b):
+    return a >= b
+
+def less_than_or_equal(a, b):
+    return a <= b
