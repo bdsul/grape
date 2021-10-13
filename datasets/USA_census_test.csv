@@ -1,4 +1,4 @@
-,age,workclass,fnlwgt,education,education-num,marital-status,occupation,relationship,race,sex,capital-gain,capital-loss,hours-per-week:,native-country
+id,age,workclass,fnlwgt,education,education-num,marital-status,occupation,relationship,race,sex,capital-gain,capital-loss,hours-per-week:,native-country
 34178,19,Private,223669,11th,7,Never-married,Other-service,Own-child,White,Male,0,0,20,United-States
 34179,47,Private,182177,Some-college,10,Divorced,Protective-serv,Unmarried,White,Female,0,0,23,United-States
 34180,24,Private,109414,Some-college,10,Never-married,Sales,Other-relative,Asian-Pac-Islander,Male,0,0,20,India
