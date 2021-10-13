@@ -1,4 +1,4 @@
-,age,workclass,fnlwgt,education,education-num,marital-status,occupation,relationship,race,sex,capital-gain,capital-loss,hours-per-week:,native-country
+id,age,workclass,fnlwgt,education,education-num,marital-status,occupation,relationship,race,sex,capital-gain,capital-loss,hours-per-week:,native-country
 1085,30,Private,241259,Assoc-voc,11,Married-civ-spouse,Transport-moving,Husband,White,Male,0,0,40,United-States
 1086,32,Private,118161,HS-grad,9,Married-civ-spouse,Protective-serv,Husband,White,Male,0,0,40,United-States
 1087,29,Private,201954,Bachelors,13,Never-married,Exec-managerial,Not-in-family,White,Male,0,0,35,United-States
