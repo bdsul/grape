@@ -106,6 +106,9 @@ def replacement(new_pop, old_pop, elite_size, pop_size):
     # new population.
     for ind in old_pop[:elite_size]:
         new_pop.insert(0, ind)
+        
+    # Re-order after merging the populations
+    new_pop.sort(key=lambda x: float('inf') if math.isnan(x.fitness.values[0]) else x.fitness.values[0], reverse=False)
 
 #    for ind in old_pop:
 #        if ind.fitness.values[0] == float('inf'):
@@ -123,7 +126,6 @@ def ge_eaSimpleWithElitism(population, toolbox, cxpb, mutpb, ngen, elite_size,
                 verbose=__debug__):
     """This algorithm reproduce the simplest evolutionary algorithm as
     presented in chapter 7 of [Back2000]_, and includes Elitism.
-
     :param population: A list of individuals.
     :param toolbox: A :class:`~deap.base.Toolbox` that contains the evolution
                     operators.
@@ -143,7 +145,6 @@ def ge_eaSimpleWithElitism(population, toolbox, cxpb, mutpb, ngen, elite_size,
     :returns: The final population
     :returns: A class:`~deap.tools.Logbook` with the statistics of the
               evolution
-
     The algorithm takes in a population and evolves it in place using the
     :meth:`varAnd` method. It returns the optimized population and a
     :class:`~deap.tools.Logbook` with the statistics of the evolution. The
@@ -151,14 +152,12 @@ def ge_eaSimpleWithElitism(population, toolbox, cxpb, mutpb, ngen, elite_size,
     each generation and the statistics if a :class:`~deap.tools.Statistics` is
     given as argument. The *cxpb* and *mutpb* arguments are passed to the
     :func:`varAnd` function. The pseudocode goes as follow ::
-
         evaluate(population)
         for g in range(ngen):
             population = select(population, len(population))
             offspring = varAnd(population, toolbox, cxpb, mutpb)
             evaluate(offspring)
             population = offspring
-
     As stated in the pseudocode above, the algorithm goes as follow. First, it
     evaluates the individuals with an invalid fitness. Second, it enters the
     generational loop where the selection procedure is applied to entirely
@@ -171,16 +170,12 @@ def ge_eaSimpleWithElitism(population, toolbox, cxpb, mutpb, ngen, elite_size,
     compute the statistics on this population. Finally, when *ngen*
     generations are done, the algorithm returns a tuple with the final
     population and a :class:`~deap.tools.Logbook` of the evolution.
-
     .. note::
-
         Using a non-stochastic selection method will result in no selection as
         the operator selects *n* individuals from a pool of *n*.
-
     This function expects the :meth:`toolbox.mate`, :meth:`toolbox.mutate`,
     :meth:`toolbox.select` and :meth:`toolbox.evaluate` aliases to be
     registered in the toolbox.
-
     .. [Back2000] Back, Fogel and Michalewicz, "Evolutionary Computation 1 :
        Basic Algorithms and Operators", 2000.
     """
@@ -315,5 +310,129 @@ def ge_eaSimpleWithElitism(population, toolbox, cxpb, mutpb, ngen, elite_size,
             print(logbook.stream)
 #            x = logbook.stream.split("\t")
 #            print(f'{int(x[0]):3} {int(x[1]):5} {float(x[2]):9.4f} {float(x[3]):7.4f} {float(x[4]):7.4f} {float(x[5]):10.4f} {float(x[6]):16.4f}')
+
+    return population, logbook
+
+def ge_eaSimpleWithElitism_evolveWithVal(population, toolbox, cxpb, mutpb, ngen, elite_size, 
+                bnf_grammar, codon_size, max_tree_depth, max_wraps,
+                points_train, points_val, halloffame, halloffame_train=None, stats=None, 
+                verbose=__debug__):
+    """
+    """
+    
+    logbook = tools.Logbook()
+    logbook.header = ['gen', 'invalid'] + (stats.fields if stats else []) + ['best_ind_train', 'best_ind_val', 'best_ind_length', 'avg_length', 'max_length', 'selection_time', 'generation_time']
+
+    start_gen = time.time()        
+    # Evaluate the individuals with an invalid fitness
+    for ind in population:
+        if not ind.fitness.valid:
+            invalid_ind = ind
+            ind.fitness.values = toolbox.evaluate(invalid_ind, points_train)
+#            ind.fitness_val = toolbox.evaluate(invalid_ind, points_val)[0]
+        
+    invalid = 0
+    for ind in population:
+        if ind.invalid == True:
+            invalid += 1
+    
+    end_gen = time.time()
+    generation_time = end_gen-start_gen
+        
+    selection_time = 0
+    
+    population.sort(key=lambda x: float('inf') if math.isnan(x.fitness.values[0]) else x.fitness.values[0], reverse=False)
+    fitness_val = toolbox.evaluate(population[0], points_val)[0]
+    population[0].fitness_val = fitness_val
+    
+    halloffame.append(population[0])
+    
+    length = [len(ind.genome) for ind in population]
+
+    avg_length = sum(length)/len(length)
+    max_length = max(length)
+    
+    best_ind_length = len(population[0].genome)
+    
+    record = stats.compile(population) if stats else {}
+    logbook.record(gen=0, invalid=invalid, **record, 
+                   best_ind_train=population[0].fitness.values[0],
+                   best_ind_val=fitness_val, best_ind_length=best_ind_length, 
+                   avg_length=avg_length, max_length=max_length, 
+                   selection_time=selection_time, generation_time=generation_time)
+
+    if verbose:
+        print(logbook.stream)
+
+    # Begin the generational process
+    for gen in range(1, ngen + 1):
+        start_gen = time.time()    
+    
+        # Select the next generation individuals
+        start = time.time()    
+        offspring = toolbox.select(population, len(population)-elite_size)
+        end = time.time()
+        selection_time = end-start
+
+        # Vary the pool of individuals
+        offspring = varAnd(offspring, toolbox, cxpb, mutpb,
+                           bnf_grammar, codon_size, max_tree_depth, max_wraps)
+
+        # Evaluate the individuals with an invalid fitness
+        for ind in offspring:
+            if not ind.fitness.valid:
+                invalid_ind = ind
+                ind.fitness.values = toolbox.evaluate(invalid_ind, points_train)
+            
+        invalid = 0
+        for ind in offspring:
+            if ind.invalid == True:
+                invalid += 1
+                
+        bestFit_previousGen = population[0].fitness.values[0]
+        # Replace the current population by the offspring
+        population[:] = replacement(offspring, population, elite_size=elite_size, pop_size=len(population))
+        
+        valid = [ind for ind in population if not math.isnan(ind.fitness.values[0])]
+
+        # Update the hall of fame with the generated individuals
+        if halloffame_train is not None:
+            halloffame_train.update(valid)
+        
+        better_individuals = [ind for ind in population if ind.fitness.values[0] <= bestFit_previousGen]
+        #Order to test with the individuals with smaller fitness before
+        better_individuals.sort(key=lambda x: x.fitness.values[0], reverse=True)
+        
+        # Update the hall of fame with the generated individuals
+        for ind in better_individuals:
+#            if ind.fitness_val == None: #if it is not None, it means that it was already tested in previous generations
+            ind.fitness_val = toolbox.evaluate(ind, points_val)[0]
+            if ind.fitness.values[0] <= halloffame[0].fitness.values[0]:
+                if ind.fitness_val < halloffame[0].fitness_val:
+                    halloffame.insert(0, ind)
+                        
+        if population[0].fitness_val == None:
+            population[0].fitness_val = toolbox.evaluate(population[0], points_val)[0]
+            
+        length = [len(ind.genome) for ind in population]
+        
+        avg_length = sum(length)/len(length)
+        max_length = max(length)
+        best_ind_length = len(halloffame[0].genome)
+        
+        end_gen = time.time()
+        generation_time = end_gen-start_gen
+        
+        # Append the current generation statistics to the logbook
+        record = stats.compile(population) if stats else {}
+        logbook.record(gen=gen, invalid=invalid, **record, 
+                       best_ind_train=halloffame[0].fitness.values[0], 
+                       best_ind_val=halloffame[0].fitness_val, 
+                       best_ind_length=best_ind_length, avg_length=avg_length, 
+                       max_length=max_length, selection_time=selection_time, 
+                       generation_time=generation_time)
+                
+        if verbose:
+            print(logbook.stream)
 
     return population, logbook
