@@ -315,13 +315,13 @@ def ge_eaSimpleWithElitism(population, toolbox, cxpb, mutpb, ngen, elite_size,
 
 def ge_eaSimpleWithElitism_evolveWithVal(population, toolbox, cxpb, mutpb, ngen, elite_size, 
                 bnf_grammar, codon_size, max_tree_depth, max_wraps,
-                points_train, points_val, halloffame, halloffame_train=None, stats=None, 
+                points_train, points_val, points_test, halloffame, stats=None, 
                 verbose=__debug__):
     """
     """
     
     logbook = tools.Logbook()
-    logbook.header = ['gen', 'invalid'] + (stats.fields if stats else []) + ['best_ind_train', 'best_ind_val', 'best_ind_length', 'avg_length', 'max_length', 'selection_time', 'generation_time']
+    logbook.header = ['gen', 'invalid'] + (stats.fields if stats else []) + ['best_ind_train', 'best_ind_val', 'best_ind_test', 'best_ind_length', 'avg_length', 'max_length', 'best_ind_phenotype', 'best_ind_depth', 'avg_depth', 'max_depth', 'best_ind_used_codons', 'avg_used_codons', 'max_used_codons', 'selection_time', 'generation_time']
 
     start_gen = time.time()        
     # Evaluate the individuals with an invalid fitness
@@ -342,10 +342,13 @@ def ge_eaSimpleWithElitism_evolveWithVal(population, toolbox, cxpb, mutpb, ngen,
     selection_time = 0
     
     population.sort(key=lambda x: float('inf') if math.isnan(x.fitness.values[0]) else x.fitness.values[0], reverse=False)
-    fitness_val = toolbox.evaluate(population[0], points_val)[0]
-    population[0].fitness_val = fitness_val
     
-    halloffame.append(population[0])
+    #Calculate the fitness_val only for the best individuals (n = elite_size)
+    for i in range(elite_size):
+        population[i].fitness_val = toolbox.evaluate(population[i], points_val)[0]
+        halloffame.append(population[i])
+    #Order halloffame by the fitness_val
+    halloffame.sort(key=lambda x: float('inf') if math.isnan(x.fitness_val) else x.fitness_val, reverse=False)
     
     length = [len(ind.genome) for ind in population]
 
@@ -354,16 +357,35 @@ def ge_eaSimpleWithElitism_evolveWithVal(population, toolbox, cxpb, mutpb, ngen,
     
     best_ind_length = len(population[0].genome)
     
+    best_ind_phenotype = halloffame[0].phenotype
+    best_ind_depth = halloffame[0].depth
+    best_ind_used_codons = halloffame[0].used_codons
+
+    depth = [ind.depth for ind in population]
+    avg_depth = np.nanmean(depth)#sum(depth)/len(depth)
+    max_depth = max(depth)
+    
+    used_codons = [ind.used_codons for ind in population]
+    avg_used_codons = np.nanmean(used_codons)#sum(used_codons)/len(used_codons)
+    max_used_codons = max(used_codons)
+    
     record = stats.compile(population) if stats else {}
     logbook.record(gen=0, invalid=invalid, **record, 
-                   best_ind_train=population[0].fitness.values[0],
-                   best_ind_val=fitness_val, best_ind_length=best_ind_length, 
+                   best_ind_train=halloffame[0].fitness.values[0],
+                   best_ind_val=halloffame[0].fitness_val, best_ind_test=np.NaN,
+                   best_ind_length=best_ind_length, 
                    avg_length=avg_length, max_length=max_length, 
+                   best_ind_phenotype=best_ind_phenotype,
+                   best_ind_depth=best_ind_depth,
+                   avg_depth=avg_depth, max_depth=max_depth,
+                   best_ind_used_codons=best_ind_used_codons,
+                   avg_used_codons=avg_used_codons,
+                   max_used_codons=max_used_codons,
                    selection_time=selection_time, generation_time=generation_time)
 
     if verbose:
         print(logbook.stream)
-
+        
     # Begin the generational process
     for gen in range(1, ngen + 1):
         start_gen = time.time()    
@@ -389,47 +411,79 @@ def ge_eaSimpleWithElitism_evolveWithVal(population, toolbox, cxpb, mutpb, ngen,
             if ind.invalid == True:
                 invalid += 1
                 
-        bestFit_previousGen = population[0].fitness.values[0]
-        # Replace the current population by the offspring
-        population[:] = replacement(offspring, population, elite_size=elite_size, pop_size=len(population))
+        min_TrainFit_hof_ind = min(halloffame, key=lambda x: x.fitness.values[0])
+        min_TrainFit_hof = min_TrainFit_hof_ind.fitness.values[0]
+        possible_new_best_inds = []
+        for ind in offspring:
+            if ind.fitness.values[0] < min_TrainFit_hof:
+                ind.fitness_val = toolbox.evaluate(ind, points_val)[0]
+                possible_new_best_inds.append(ind)
+                
+        #Halloffame is ordered by fitness_val
+        #Order by fitness_train in the opposite way
+        #Otherwise, the best ind could be replaced firstly
+        halloffame.sort(key=lambda x: float('inf') if math.isnan(x.fitness.values[0]) else x.fitness.values[0], reverse=True)
+        for ind in possible_new_best_inds:
+            for i in range(len(halloffame)):
+                hof = halloffame[i]
+                if ind.fitness.values[0] < hof.fitness.values[0]: #training
+                    if ind.fitness_val < hof.fitness_val: #validation
+                        halloffame[i] = ind
+                        break #Don't replace more than one hof with the same ind
+                else: 
+                    break #all the next fitness_train are better
+        #Re-order halloffame considering fitness_val 
+        halloffame.sort(key=lambda x: float('inf') if math.isnan(x.fitness_val) else x.fitness_val, reverse=False)
         
-        valid = [ind for ind in population if not math.isnan(ind.fitness.values[0])]
-
-        # Update the hall of fame with the generated individuals
-        if halloffame_train is not None:
-            halloffame_train.update(valid)
-        
-        better_individuals = [ind for ind in population if ind.fitness.values[0] <= bestFit_previousGen]
-        #Order to test with the individuals with smaller fitness before
-        better_individuals.sort(key=lambda x: x.fitness.values[0], reverse=True)
-        
-        # Update the hall of fame with the generated individuals
-        for ind in better_individuals:
-#            if ind.fitness_val == None: #if it is not None, it means that it was already tested in previous generations
-            ind.fitness_val = toolbox.evaluate(ind, points_val)[0]
-            if ind.fitness.values[0] <= halloffame[0].fitness.values[0]:
-                if ind.fitness_val < halloffame[0].fitness_val:
-                    halloffame.insert(0, ind)
-                        
-        if population[0].fitness_val == None:
-            population[0].fitness_val = toolbox.evaluate(population[0], points_val)[0]
-            
+        population[0:elite_size] = halloffame #replace the beginning of the old pop by hof
+        del population[elite_size:len(population)] #remove the remainder of the old pop
+        for ind in offspring:
+            if ind not in population:
+                population.append(ind)
+                
         length = [len(ind.genome) for ind in population]
-        
+
         avg_length = sum(length)/len(length)
         max_length = max(length)
-        best_ind_length = len(halloffame[0].genome)
+        
+        best_ind_length = len(population[0].genome)
+        
+        best_ind_phenotype = halloffame[0].phenotype
+        best_ind_depth = halloffame[0].depth
+        best_ind_used_codons = halloffame[0].used_codons
+    
+        depth = [ind.depth for ind in population]
+        avg_depth = np.nanmean(depth)#sum(depth)/len(depth)
+        max_depth = max(depth)
+        
+        used_codons = [ind.used_codons for ind in population]
+        avg_used_codons = np.nanmean(used_codons)#sum(used_codons)/len(used_codons)
+        max_used_codons = max(used_codons)
+
         
         end_gen = time.time()
         generation_time = end_gen-start_gen
+        
+        if gen == ngen:
+            best_ind_test = toolbox.evaluate(halloffame[0], points_test)[0]
+        else:
+            best_ind_test = np.NaN
         
         # Append the current generation statistics to the logbook
         record = stats.compile(population) if stats else {}
         logbook.record(gen=gen, invalid=invalid, **record, 
                        best_ind_train=halloffame[0].fitness.values[0], 
                        best_ind_val=halloffame[0].fitness_val, 
-                       best_ind_length=best_ind_length, avg_length=avg_length, 
-                       max_length=max_length, selection_time=selection_time, 
+                       best_ind_test=best_ind_test,
+                       best_ind_length=best_ind_length, 
+                       avg_length=avg_length, max_length=max_length, 
+                       best_ind_phenotype=best_ind_phenotype,
+                       best_ind_depth=best_ind_depth,
+                       avg_depth=avg_depth, max_depth=max_depth,
+                       best_ind_used_codons=best_ind_used_codons,
+                       avg_used_codons=avg_used_codons,
+                       max_used_codons=max_used_codons,
+                       selection_time=selection_time, 
                        generation_time=generation_time)
                 
         if verbose:
