@@ -31,17 +31,29 @@ class ge(object):
                 # The individual needs to be mapped from the given input
                 # parameters.
                 self.phenotype, self.genome, self.tree, self.nodes, self.invalid, \
-                    self.depth, self.used_codons = mapper(genome, ind_tree, bnf_grammar, max_tree_depth, max_wraps)
+                    self.depth, self.used_codons, self.n_wraps = mapper(genome, ind_tree, bnf_grammar, max_tree_depth, max_wraps)
     
             else:
                 # The individual does not need to be mapped.
-                self.genome, self.tree = genome, ind_tree
+                self.genome, self.tree, self.n_wraps = genome, ind_tree, -1
             
     #        self.evaluation_time = 0
     
             #self.fitness = creator.FitnessMin#float('nan')#params['FITNESS_FUNCTION'].default_fitness
             self.runtime_error = False
             self.name = None
+            self.fitness_val = None
+            self.fitness_each_sample = [] #len = population_size; Each position receives 1 if prediction is correct, 0 if false.
+                                     #if LEXICASE_EACH_BIT is True, each position receives the number of bits predicted correctly
+            self.n_gates = None #number of gates in the phenotype
+            self.n_gates_longest_path = None #number of gates in the longest path
+            
+            self.samples_attempted = None 
+            self.samples_used = None 
+            self.samples_unsuccessful1 = None 
+            self.samples_unsuccessful2 = None 
+            
+                                 
     
         def deep_copy(self):
             """
@@ -62,6 +74,20 @@ class ge(object):
             new_ind.depth, new_ind.nodes = self.depth, self.nodes
             new_ind.used_codons = self.used_codons
             new_ind.runtime_error = self.runtime_error
+            
+            new_ind.fitness_val = self.fitness_val
+            #New attributes (maybe It is not necessary to update all here)
+            new_ind.predict_result = self.predict_result
+            new_ind.n_gates = self.n_gates
+            new_ind.n_gates_longest_path = self.n_gates_longest_path
+            
+            new_ind.samples_attempted = self.samples_attempted
+            new_ind.samples_used = self.samples_used
+            new_ind.samples_unsuccessful1 = self.samples_unsuccessful1
+            new_ind.samples_unsuccessful2 = self.samples_unsuccessful2
+            
+            new_ind.n_wraps = self.n_wraps
+            
             
             return new_ind
     
@@ -236,6 +262,462 @@ class ge(object):
             chosen.append(max(aspirants, key=attrgetter(fit_attr)))
         return chosen
     
+    def selLexicase(individuals, k):
+        """Returns an individual that does the best on the fitness cases when
+        considered one at a time in random order.
+        http://faculty.hampshire.edu/lspector/pubs/lexicase-IEEE-TEC.pdf
+        :param individuals: A list of individuals to select from.
+        :param k: The number of individuals to select.
+        :returns: A list of selected individuals.
+        """
+        selected_individuals = []
+        valid_individuals = [i for i in individuals if not i.invalid]
+        l_samples = np.shape(valid_individuals[0].fitness_each_sample)[0]
+        
+        cases = list(range(0,l_samples))
+        #fit_weights = valid_individuals[0].fitness.weights
+        candidates = valid_individuals
+    
+        for i in range(k):
+            #cases = list(range(len(valid_individuals[0].fitness.values)))
+            shuffle(cases)
+    
+            while len(cases) > 0 and len(candidates) > 1:
+                #f = min if fit_weights[cases[0]] < 0 else max
+                candidates_update = [i for i in candidates if i.fitness_each_sample[cases[0]] == True]
+                
+                if len(candidates_update) == 0:
+                    #no candidate correctly predicted the case
+                    pass
+                else:
+                    candidates = candidates_update    
+                del cases[0]                    
+    
+                #best_val_for_case = f(map(lambda x: x.fitness.values[cases[0]], candidates))
+    
+                #candidates = list(filter(lambda x: x.fitness.values[cases[0]] == best_val_for_case, candidates))
+                #cases.pop(0)
+    
+            #If there is only one candidate remaining, it will be selected
+            #If there are more than one, the choice will be made randomly
+            selected_individuals.append(choice(candidates))
+            
+            cases = list(range(0,l_samples))
+            candidates = valid_individuals
+    
+        return selected_individuals
+    
+    def selLexicaseCount(individuals, k):
+        """Same as Lexicase Selection, but counting attempts of filtering and
+        updating respective attributes on ind.
+        """
+        selected_individuals = []
+        valid_individuals = [i for i in individuals if not i.invalid]
+        l_samples = np.shape(valid_individuals[0].fitness_each_sample)[0]
+        
+        #For analysing Lexicase selection
+        samples_attempted = [0]*l_samples
+        samples_used = [0]*l_samples
+        samples_unsuccessful1 = [0]*l_samples
+        samples_unsuccessful2 = [0]*l_samples
+        inds_to_choose = [0]*k
+        times_chosen = [0]*4
+        
+        cases = list(range(0,l_samples))
+        #fit_weights = valid_individuals[0].fitness.weights
+        candidates = valid_individuals
+    
+        for i in range(k):
+            #cases = list(range(len(valid_individuals[0].fitness.values)))
+            shuffle(cases)
+    
+            while len(cases) > 0 and len(candidates) > 1:
+                #f = min if fit_weights[cases[0]] < 0 else max
+                candidates_update = [i for i in candidates if i.fitness_each_sample[cases[0]] == True]
+                
+                samples_attempted[cases[0]] += 1
+                if (len(candidates_update) < len(candidates)) and (len(candidates_update) > 0):
+                    samples_used[cases[0]] += 1
+                if (len(candidates_update) == len(candidates)):
+                    samples_unsuccessful1[cases[0]] += 1
+                if len(candidates_update) == 0:
+                    samples_unsuccessful2[cases[0]] += 1
+                
+                if len(candidates_update) == 0:
+                    #no candidate correctly predicted the case
+                    pass
+                else:
+                    candidates = candidates_update    
+                del cases[0]                    
+    
+                #best_val_for_case = f(map(lambda x: x.fitness.values[cases[0]], candidates))
+    
+                #candidates = list(filter(lambda x: x.fitness.values[cases[0]] == best_val_for_case, candidates))
+                #cases.pop(0)
+    
+            #If there is only one candidate remaining, it will be selected
+            if len(candidates) == 1:
+                selected_individuals.append(candidates[0])
+                inds_to_choose[i] = 1
+                times_chosen[0] += 1 #The choise was made by fitness
+            else: #If there are more than one, the choice will be made randomly
+                selected_individuals.append(choice(candidates))
+                inds_to_choose[i] = len(candidates)
+                times_chosen[3] += 1 #The choise was made by randomly
+            
+            cases = list(range(0,l_samples))
+            candidates = valid_individuals
+    
+        return selected_individuals, samples_attempted, samples_used, samples_unsuccessful1, samples_unsuccessful2, inds_to_choose, times_chosen
+    
+    def selLexicaseCountSecondObjective(individuals, k):
+        """Same as Lexicase Selection, but counting attempts of filtering and
+        updating respective attributes on ind.
+        """
+        selected_individuals = []
+        valid_individuals = [i for i in individuals if not i.invalid]
+        l_samples = np.shape(valid_individuals[0].fitness_each_sample)[0]
+        
+        #For analysing Lexicase selection
+        samples_attempted = [0]*l_samples
+        samples_used = [0]*l_samples
+        samples_unsuccessful1 = [0]*l_samples
+        samples_unsuccessful2 = [0]*l_samples
+        inds_to_choose = [0]*k
+        
+        cases = list(range(0,l_samples))
+        #fit_weights = valid_individuals[0].fitness.weights
+        candidates = valid_individuals
+    
+        for i in range(k):
+            #cases = list(range(len(valid_individuals[0].fitness.values)))
+            shuffle(cases)
+    
+            while len(cases) > 0 and len(candidates) > 1:
+                #f = min if fit_weights[cases[0]] < 0 else max
+                candidates_update = [i for i in candidates if i.fitness_each_sample[cases[0]] == True]
+                
+                samples_attempted[cases[0]] += 1
+                if (len(candidates_update) < len(candidates)) and (len(candidates_update) > 0):
+                    samples_used[cases[0]] += 1
+                if (len(candidates_update) == len(candidates)):
+                    samples_unsuccessful1[cases[0]] += 1
+                if len(candidates_update) == 0:
+                    samples_unsuccessful2[cases[0]] += 1
+                
+                if len(candidates_update) == 0:
+                    #no candidate correctly predicted the case
+                    pass
+                else:
+                    candidates = candidates_update    
+                del cases[0]                    
+    
+                #best_val_for_case = f(map(lambda x: x.fitness.values[cases[0]], candidates))
+    
+                #candidates = list(filter(lambda x: x.fitness.values[cases[0]] == best_val_for_case, candidates))
+                #cases.pop(0)
+    
+            #If there is only one candidate remaining, it will be selected
+            if len(candidates) == 1:
+                selected_individuals.append(candidates[0])
+            else:
+            #If there are more than one, the choice will be made by a second objective
+                candidates.sort(key=lambda x: x.n_gates, reverse=False)
+                selected_individuals.append(candidates[0])
+            inds_to_choose[i] = len(candidates)
+            
+            cases = list(range(0,l_samples))
+            candidates = valid_individuals
+    
+        return selected_individuals, samples_attempted, samples_used, samples_unsuccessful1, samples_unsuccessful2, inds_to_choose
+
+    def selLexicaseEachBitCount(individuals, k):
+        """
+        """
+        selected_individuals = []
+        valid_individuals = [i for i in individuals if not i.invalid]
+        l_samples = np.shape(valid_individuals[0].fitness_each_sample)[0]
+        
+        #For analysing Lexicase selection
+        samples_attempted = [0]*l_samples
+        samples_used = [0]*l_samples
+        samples_unsuccessful1 = [0]*l_samples
+        samples_unsuccessful2 = [0]*l_samples
+        inds_to_choose = [0]*k
+        
+        cases = list(range(0,l_samples))
+        candidates = valid_individuals
+    
+        for i in range(k):
+            shuffle(cases)
+    
+            while len(cases) > 0 and len(candidates) > 1:
+                f = max
+                best_val_for_case = f(map(lambda x: x.fitness_each_sample[cases[0]], candidates))
+                
+                samples_attempted[cases[0]] += 1 #attempt of filtering
+                
+                if best_val_for_case == 0: #no candidate correctly predicted any bit
+                    samples_unsuccessful2[cases[0]] += 1
+                
+                else: #at least one candidate correctly predicted at least one bit
+                    candidates_update = list(filter(lambda x: x.fitness_each_sample[cases[0]] == best_val_for_case, candidates))
+                
+                    if (len(candidates_update) < len(candidates)) and (len(candidates_update) > 0): #a successful attempt of filtering happened
+                        samples_used[cases[0]] += 1
+                    elif (len(candidates_update) == len(candidates)): #all candidates correctly predicted the same quantity of bits for this case and it is not useful
+                        samples_unsuccessful1[cases[0]] += 1
+                    
+                    candidates = candidates_update    
+
+                del cases[0]                    
+    
+            #If there is only one candidate remaining, it will be selected
+            #If there are more than one, the choice will be made randomly
+            selected_individuals.append(choice(candidates))
+            inds_to_choose[i] = len(candidates)
+            
+            cases = list(range(0,l_samples))
+            candidates = valid_individuals
+            
+        return selected_individuals, samples_attempted, samples_used, samples_unsuccessful1, samples_unsuccessful2, inds_to_choose
+
+    def selLexicaseEachBitCountSecondObjective(individuals, k):
+        """
+        """
+        selected_individuals = []
+        valid_individuals = [i for i in individuals if not i.invalid]
+        l_samples = np.shape(valid_individuals[0].fitness_each_sample)[0]
+        
+        #For analysing Lexicase selection
+        samples_attempted = [0]*l_samples
+        samples_used = [0]*l_samples
+        samples_unsuccessful1 = [0]*l_samples
+        samples_unsuccessful2 = [0]*l_samples
+        inds_to_choose = [0]*k
+        
+        cases = list(range(0,l_samples))
+        candidates = valid_individuals
+    
+        for i in range(k):
+            shuffle(cases)
+    
+            while len(cases) > 0 and len(candidates) > 1:
+                f = max
+                best_val_for_case = f(map(lambda x: x.fitness_each_sample[cases[0]], candidates))
+                
+                samples_attempted[cases[0]] += 1 #attempt of filtering
+                
+                if best_val_for_case == 0: #no candidate correctly predicted any bit
+                    samples_unsuccessful2[cases[0]] += 1
+                
+                else: #at least one candidate correctly predicted at least one bit
+                    candidates_update = list(filter(lambda x: x.fitness_each_sample[cases[0]] == best_val_for_case, candidates))
+                
+                    if (len(candidates_update) < len(candidates)) and (len(candidates_update) > 0): #a successful attempt of filtering happened
+                        samples_used[cases[0]] += 1
+                    elif (len(candidates_update) == len(candidates)): #all candidates correctly predicted the same quantity of bits for this case and it is not useful
+                        samples_unsuccessful1[cases[0]] += 1
+                    
+                    candidates = candidates_update    
+
+                del cases[0]                    
+    
+            #If there is only one candidate remaining, it will be selected
+            if len(candidates) == 1:
+                selected_individuals.append(candidates[0])
+                inds_to_choose[i] = 1
+            else:
+            #If there are more than one, the choice will be made by a second objective
+            #In case of tie in the second objective, choose randomly
+                f = min
+                best_val = f(map(lambda x: x.n_gates, candidates))
+                candidates_update = list(filter(lambda x: x.n_gates == best_val, candidates))
+                
+                selected_individuals.append(choice(candidates_update))
+                inds_to_choose[i] = len(candidates_update)
+            
+            cases = list(range(0,l_samples))
+            candidates = valid_individuals
+            
+        return selected_individuals, samples_attempted, samples_used, samples_unsuccessful1, samples_unsuccessful2, inds_to_choose
+    
+    def selLexicaseOtherObjectives(individuals, k, secondObjective, thirdObjective=None, choose_random=False):
+        """
+        When choose_random is True, choose randomly which objective will be used first
+        Put choose_random as True only if there is a thirdObjective
+        """
+        selected_individuals = []
+        valid_individuals = [i for i in individuals if not i.invalid]
+        l_samples = np.shape(valid_individuals[0].fitness_each_sample)[0]
+        
+        #For analysing Lexicase selection
+        samples_attempted = [0]*l_samples
+        samples_used = [0]*l_samples
+        samples_unsuccessful1 = [0]*l_samples
+        samples_unsuccessful2 = [0]*l_samples
+        inds_to_choose = [0]*k
+        times_chosen = [0]*4
+        
+        cases = list(range(0,l_samples))
+        candidates = valid_individuals
+    
+        for i in range(k):
+            shuffle(cases)
+    
+            while len(cases) > 0 and len(candidates) > 1:
+                f = max
+                best_val_for_case = f(map(lambda x: x.fitness_each_sample[cases[0]], candidates))
+                
+                samples_attempted[cases[0]] += 1 #attempt of filtering
+                
+                if best_val_for_case == 0: #no candidate correctly predicted any bit
+                    samples_unsuccessful2[cases[0]] += 1
+                
+                else: #at least one candidate correctly predicted at least one bit
+                    candidates_update = list(filter(lambda x: x.fitness_each_sample[cases[0]] == best_val_for_case, candidates))
+                
+                    if (len(candidates_update) < len(candidates)) and (len(candidates_update) > 0): #a successful attempt of filtering happened
+                        samples_used[cases[0]] += 1
+                    elif (len(candidates_update) == len(candidates)): #all candidates correctly predicted the same quantity of bits for this case and it is not useful
+                        samples_unsuccessful1[cases[0]] += 1
+                    
+                    candidates = candidates_update    
+
+                del cases[0]                    
+    
+            #If there is only one candidate remaining, it will be selected
+            if len(candidates) == 1:
+                selected_individuals.append(candidates[0])
+                inds_to_choose[i] = 1
+                times_chosen[0] += 1 #The choise was made by fitness
+                #print("Chosen by fitness")
+            else:
+            #If there are more than one, the choice will be made by a second objective
+                f = min
+#                a = candidates[0].n_gates
+
+                if choose_random:
+                    r = random()
+                    if r > 0.5:
+                        moo = [secondObjective, thirdObjective]
+                    else:
+                        moo = [thirdObjective, secondObjective]
+                else:
+                    moo = [secondObjective, thirdObjective]
+                
+                best_val = f(map(lambda x: getattr(x, moo[0]), candidates))
+                candidates_update = list(filter(lambda x: getattr(x, moo[0]) == best_val, candidates))
+                if len(candidates_update) == 1:
+                    selected_individuals.append(candidates_update[0])
+                    inds_to_choose[i] = 1
+                    times_chosen[1] += 1 #The choise was made by second objective
+#                    print("Chosen by", secondObjective)
+#                    print("Original:", a)
+#                    print("Now:", candidates_update[0].n_gates)
+                else:
+                    #In case of tie in the second objective, choose using the third objective
+#                    b = candidates_update[0].n_gates_longest_path
+                    if moo[1]:
+                        best_val = f(map(lambda x: getattr(x, moo[1]), candidates_update))
+                        candidates_update = list(filter(lambda x: getattr(x, moo[1]) == best_val, candidates))
+                        if len(candidates_update) == 1:
+                            selected_individuals.append(candidates_update[0])
+                            inds_to_choose[i] = 1
+                            times_chosen[2] += 1 #The choise was made by third objective
+    #                        print("Chosen by", thirdObjective)
+    #                        print("Original:", b)
+    #                        print("Now:", candidates_update[0].n_gates_longest_path)
+                        else:
+                            #If the tie still remains, choose randomly                
+                            selected_individuals.append(choice(candidates_update))
+                            inds_to_choose[i] = len(candidates_update)
+                            times_chosen[3] += 1 #The choise was made randomly
+                            #print("Chosen randomly")
+                    else:
+                        #If the tie still remains, choose randomly                
+                        selected_individuals.append(choice(candidates_update))
+                        inds_to_choose[i] = len(candidates_update)
+                        times_chosen[3] += 1 #The choise was made randomly
+            cases = list(range(0,l_samples))
+            candidates = valid_individuals
+            
+        return selected_individuals, samples_attempted, samples_used, samples_unsuccessful1, samples_unsuccessful2, inds_to_choose, times_chosen
+    
+    def selLexicaseMixAllObjectives(individuals, k, secondObjective, thirdObjective=None):
+        """
+        """
+        selected_individuals = []
+        valid_individuals = [i for i in individuals if not i.invalid]
+        l_samples = np.shape(valid_individuals[0].fitness_each_sample)[0]
+        
+        inds_to_choose = [0]*k
+        times_chosen = [0]*4
+        
+        cases = list(range(0,l_samples))
+        candidates = valid_individuals
+    
+        for i in range(k):
+            shuffle(cases)
+            
+            r = random()
+            
+            if r <= 1/6:
+                moo = ['error', secondObjective, thirdObjective]
+            elif r > 1/6 and r <= 1/3:
+                moo = ['error', thirdObjective, secondObjective]
+            elif r > 2/6 and r <= 3/6:
+                moo = [secondObjective, 'error', thirdObjective]
+            elif r > 3/6 and r <= 4/6:
+                moo = [secondObjective, thirdObjective, 'error']
+            elif r > 4/6 and r <= 5/6:
+                moo = [thirdObjective, 'error', secondObjective]
+            elif r > 5/6:
+                moo = [thirdObjective, secondObjective, 'error']
+          
+            while len(cases) > 0 and len(candidates) > 1:
+                for j in range(3):
+                    if moo[j] == 'error':
+                        f = max
+                        best_val_for_case = f(map(lambda x: x.fitness_each_sample[cases[0]], candidates))
+                        if best_val_for_case == 0: #no candidate correctly predicted any bit
+                            pass
+                        else: #at least one candidate correctly predicted at least one bit
+                            candidates_update = list(filter(lambda x: x.fitness_each_sample[cases[0]] == best_val_for_case, candidates))
+                            candidates = candidates_update
+                        del cases[0]
+        
+                    elif moo[j] == secondObjective or moo[j] == thirdObjective:
+                        f = min
+                        best_val = f(map(lambda x: getattr(x, moo[j]), candidates))
+                        candidates_update = list(filter(lambda x: getattr(x, moo[j]) == best_val, candidates))
+                        candidates = candidates_update
+                        
+                    if len(candidates) == 1:
+                        #We had a perfect filtering, then we need to stop
+                        #Otherwise, it would continue in the loop of the objectives
+                        times_chosen[j] += 1 #The choice was made by the i-th objective
+                        break 
+                        
+                                    
+    
+            #If there is only one candidate remaining, it will be selected
+            if len(candidates) == 1:
+                selected_individuals.append(candidates[0])
+                inds_to_choose[i] = 1
+            else:
+                #If the tie still remains, choose randomly                
+                selected_individuals.append(choice(candidates))
+                inds_to_choose[i] = len(candidates)
+                times_chosen[3] += 1 #The choice was made randomly
+            
+            #Re-initilise to select the next individual
+            cases = list(range(0,l_samples))
+            candidates = valid_individuals
+            
+        return selected_individuals, inds_to_choose, times_chosen
+    
+    
 def mapper(genome, tree, bnf_grammar, max_tree_depth, max_wraps):
     """
     Wheel for mapping. Calls the correct mapper for a given _input. Checks
@@ -265,7 +747,7 @@ def mapper(genome, tree, bnf_grammar, max_tree_depth, max_wraps):
         # algorithm.mapper.map_ind_from_genome() if we don't need to
         # store the whole tree.
         phenotype, genome, tree, nodes, invalid, depth, \
-            used_codons = map_ind_from_genome(genome, bnf_grammar, max_tree_depth, max_wraps)
+            used_codons, wraps = map_ind_from_genome(genome, bnf_grammar, max_tree_depth, max_wraps)
 
     else:
         # We have a tree.
@@ -282,7 +764,7 @@ def mapper(genome, tree, bnf_grammar, max_tree_depth, max_wraps):
         # Set values for invalid individuals.
         phenotype, nodes, depth, used_codons = None, np.NaN, np.NaN, np.NaN
 
-    return phenotype, genome, tree, nodes, invalid, depth, used_codons
+    return phenotype, genome, tree, nodes, invalid, depth, used_codons, wraps
 
 
 def map_ind_from_genome(genome, bnf_grammar, max_tree_depth, max_wraps):
@@ -382,12 +864,15 @@ def map_ind_from_genome(genome, bnf_grammar, max_tree_depth, max_wraps):
     # Generate phenotype string.
     output = "".join(output)
     
+    if wraps == -1:
+        wraps += 1 #Because we started with -1
+    
     if len(unexpanded_symbols) > 0:
         # All non-terminals have not been completely expanded, invalid
         # solution.
-        return None, genome, None, nodes, True, max_depth, used_input
+        return None, genome, None, nodes, True, max_depth, used_input, wraps
 
-    return output, genome, None, nodes, False, max_depth, used_input
+    return output, genome, None, nodes, False, max_depth, used_input, wraps
 
 
 class Grammar(object):
@@ -1620,7 +2105,7 @@ def check_ind(ind, check, max_tree_depth):#, max_tree_nodes, max_genome_length):
     
 def reMap(ind, genome, bnf_grammar, max_tree_depth, max_wraps):
     ind.phenotype, ind.genome, ind.tree, ind.nodes, ind.invalid, \
-                ind.depth, ind.used_codons = mapper(genome, None, bnf_grammar, max_tree_depth, max_wraps)
+                ind.depth, ind.used_codons, ind.n_wraps = mapper(genome, None, bnf_grammar, max_tree_depth, max_wraps)
     return ind
 
 

@@ -490,3 +490,240 @@ def ge_eaSimpleWithElitism_evolveWithVal(population, toolbox, cxpb, mutpb, ngen,
             print(logbook.stream)
 
     return population, logbook
+    
+def ge_eaSimpleWithElitismLexicase(population, toolbox, cxpb, mutpb, ngen, elite_size, 
+                bnf_grammar, codon_size, max_tree_depth, max_wraps,
+                points_train, points_test=None, stats=None, halloffame=None, 
+                verbose=__debug__):
+    """
+    """
+    
+    selection_method = 'Lexicase'
+    
+    logbook = tools.Logbook()
+    if points_test:
+        logbook.header = ['gen', 'invalid'] + (stats.fields if stats else []) + ['fitness_test', 'best_ind_length', 'avg_length', 'max_length', 'best_ind_nodes', 'avg_nodes', 'max_nodes', 'best_ind_depth', 'avg_depth', 'max_depth', 'avg_used_codons', 'max_used_codons', 'best_ind_used_codons', 'samples_attempted', 'samples_used', 'samples_unsuccessful1', 'samples_unsuccessful2', 'inds_to_choose', 'times_chosen', 'behavioural_diversity', 'max_n_wraps_valid', 'avg_n_wraps_valid', 'max_n_wraps_pop', 'avg_n_wraps_pop', 'selection_time', 'selection_method', 'generation_time']
+    else:
+        logbook.header = ['gen', 'invalid'] + (stats.fields if stats else []) + ['best_ind_length', 'avg_length', 'max_length', 'best_ind_nodes', 'avg_nodes', 'max_nodes', 'best_ind_depth', 'avg_depth', 'max_depth', 'avg_used_codons', 'max_used_codons', 'best_ind_used_codons', 'samples_attempted', 'samples_used', 'samples_unsuccessful1', 'samples_unsuccessful2', 'inds_to_choose', 'times_chosen', 'behavioural_diversity', 'max_n_wraps_valid', 'avg_n_wraps_valid', 'max_n_wraps', 'avg_n_wraps_pop', 'selection_time_pop', 'selection_method', 'generation_time']
+
+    start_gen = time.time()        
+    # Evaluate the individuals with an invalid fitness
+    for ind in population:
+        if not ind.fitness.valid:
+            invalid_ind = ind
+            ind.fitness.values = toolbox.evaluate(invalid_ind, points_train)
+        
+    invalid = 0
+    list_behaviours = []
+    for ind in population:
+        if ind.invalid == True:
+            invalid += 1
+        else:
+            list_behaviours.append(str(ind.fitness_each_sample))
+    unique_behaviours = np.unique(list_behaviours, return_counts=False)
+    
+    behavioural_diversity = len(unique_behaviours)/len(list_behaviours)
+            
+    valid = [ind for ind in population if not math.isnan(ind.fitness.values[0])]
+    
+    # Update the hall of fame with the generated individuals
+    if halloffame is not None:
+        halloffame.update(valid)
+    
+    length = [len(ind.genome) for ind in valid]
+
+    avg_length = sum(length)/len(length)
+    max_length = max(length)
+    best_ind_length = len(halloffame.items[0].genome)
+    
+    nodes = [ind.nodes for ind in valid]
+    
+    best_ind_nodes = halloffame.items[0].nodes
+    avg_nodes = sum(nodes)/len(nodes)
+    max_nodes = max(nodes)
+    
+    depth = [ind.depth for ind in valid]
+    
+    best_ind_depth = halloffame.items[0].depth
+    avg_depth = sum(depth)/len(depth)
+    max_depth = max(depth)
+    
+    used_codons = [ind.used_codons for ind in valid]
+    
+    avg_used_codons = sum(used_codons)/len(used_codons)
+    max_used_codons = max(used_codons)
+    best_ind_used_codons = halloffame.items[0].used_codons
+    
+    n_wraps_valid = [ind.n_wraps for ind in valid]
+    n_wraps_pop = [ind.n_wraps for ind in population]
+    
+    max_n_wraps_valid = max(n_wraps_valid)
+    avg_n_wraps_valid = sum(n_wraps_valid)/len(n_wraps_valid) 
+    max_n_wraps_pop = max(n_wraps_pop)
+    avg_n_wraps_pop = sum(n_wraps_pop)/len(n_wraps_pop) 
+                        
+    selection_time = 0
+
+    end_gen = time.time()
+    generation_time = end_gen-start_gen
+
+    if points_test:
+        fitness_test = toolbox.evaluate(population[0], points_test)[0] #TODO
+    
+    length = [len(ind.genome) for ind in population]
+
+    avg_length = sum(length)/len(length)
+    max_length = max(length)
+    
+    best_ind_length = len(population[0].genome)
+    
+    record = stats.compile(population) if stats else {}
+    if points_test: #TODO
+        logbook.record(gen=0, invalid=invalid, **record, fitness_test=fitness_test, 
+                       best_ind_length=best_ind_length, avg_length=avg_length, 
+                       max_length=max_length, selection_time=selection_time, 
+                       generation_time=generation_time)
+    else:
+        logbook.record(gen=0, invalid=invalid, **record, 
+                       best_ind_length=best_ind_length, avg_length=avg_length, 
+                       max_length=max_length,
+                       best_ind_nodes=best_ind_nodes,
+                       avg_nodes=avg_nodes,
+                       max_nodes=max_nodes,
+                       best_ind_depth=best_ind_depth,
+                       avg_depth=avg_depth,
+                       max_depth=max_depth,
+                       avg_used_codons=avg_used_codons,
+                       max_used_codons=max_used_codons, 
+                       best_ind_used_codons=best_ind_used_codons,
+                       samples_attempted=0,
+                       samples_used=0, 
+                       samples_unsuccessful1=0,
+                       samples_unsuccessful2=0,
+                       inds_to_choose=0,
+                       times_chosen=[0]*4,
+                       behavioural_diversity=behavioural_diversity,
+                       max_n_wraps_valid=max_n_wraps_valid,
+                       avg_n_wraps_valid=avg_n_wraps_valid,
+                       max_n_wraps_pop=max_n_wraps_pop,
+                       avg_n_wraps_pop=avg_n_wraps_pop,
+                       selection_time=selection_time, selection_method=selection_method, 
+                       generation_time=generation_time)
+    if verbose:
+        print(logbook.stream)
+
+    # Begin the generational process
+    for gen in range(logbook.select("gen")[-1]+1, ngen + 1):
+        start_gen = time.time()    
+    
+        # Select the next generation individuals
+        start = time.time()    
+        offspring, samples_attempted, samples_used, samples_unsuccessful1, samples_unsuccessful2, inds_to_choose, times_chosen = toolbox.select(population, len(population)-len(halloffame))
+        end = time.time()
+        selection_time = end-start
+
+        # Vary the pool of individuals
+        offspring = varAnd(offspring, toolbox, cxpb, mutpb,
+                           bnf_grammar, codon_size, max_tree_depth, max_wraps)
+
+        # Evaluate the individuals with an invalid fitness
+        for ind in offspring:
+            if not ind.fitness.valid:
+                invalid_ind = ind
+                ind.fitness.values = toolbox.evaluate(invalid_ind, points_train)
+            
+        invalid = 0
+        list_behaviours = []
+        for ind in population:
+            if ind.invalid == True:
+                invalid += 1
+            else:
+                list_behaviours.append(str(ind.fitness_each_sample))
+        unique_behaviours = np.unique(list_behaviours, return_counts=False)
+        
+        behavioural_diversity = len(unique_behaviours)/len(list_behaviours)
+            
+        #Update population for next generation
+        population[:] = offspring
+        for i in range(len(halloffame)):
+            population.append(halloffame.items[i])    
+            
+        valid = [ind for ind in population if not math.isnan(ind.fitness.values[0])]
+    
+        # Update the hall of fame with the generated individuals
+        if halloffame is not None:
+            halloffame.update(valid)
+        
+        length = [len(ind.genome) for ind in population]
+        
+        avg_length = sum(length)/len(length)
+        max_length = max(length)
+        best_ind_length = len(halloffame.items[0].genome)
+        
+        nodes = [ind.nodes for ind in valid]
+        
+        best_ind_nodes = halloffame.items[0].nodes
+        avg_nodes = sum(nodes)/len(nodes)
+        max_nodes = max(nodes)
+        
+        depth = [ind.depth for ind in valid]
+        
+        best_ind_depth = halloffame.items[0].depth
+        avg_depth = sum(depth)/len(depth)
+        max_depth = max(depth)
+        
+        used_codons = [ind.used_codons for ind in valid]
+        
+        avg_used_codons = sum(used_codons)/len(used_codons)
+        max_used_codons = max(used_codons)
+        best_ind_used_codons = halloffame.items[0].used_codons
+        
+        n_wraps_valid = [ind.n_wraps for ind in valid]
+        n_wraps_pop = [ind.n_wraps for ind in population]
+        
+        max_n_wraps_valid = max(n_wraps_valid)
+        avg_n_wraps_valid = sum(n_wraps_valid)/len(n_wraps_valid) 
+        max_n_wraps_pop = max(n_wraps_pop)
+        avg_n_wraps_pop = sum(n_wraps_pop)/len(n_wraps_pop) 
+        
+        end_gen = time.time()
+        generation_time = end_gen-start_gen
+        
+        # Append the current generation statistics to the logbook
+        record = stats.compile(population) if stats else {}
+        if points_test: #TODO
+            logbook.record(gen=gen, invalid=invalid, **record, fitness_test=fitness_test, 
+                       best_ind_length=best_ind_length, avg_length=avg_length, 
+                       max_length=max_length, selection_time=selection_time, 
+                       generation_time=generation_time)
+        else:
+            logbook.record(gen=gen, invalid=invalid, **record, 
+                       best_ind_length=best_ind_length, avg_length=avg_length, 
+                       max_length=max_length,
+                       best_ind_nodes=best_ind_nodes,
+                       avg_nodes=avg_nodes,
+                       max_nodes=max_nodes,
+                       best_ind_depth=best_ind_depth,
+                       avg_depth=avg_depth,
+                       max_depth=max_depth,
+                       avg_used_codons=avg_used_codons,
+                       max_used_codons=max_used_codons, 
+                       best_ind_used_codons=best_ind_used_codons,
+                       samples_attempted=samples_attempted,
+                       samples_used=samples_used, 
+                       samples_unsuccessful1=samples_unsuccessful1,
+                       samples_unsuccessful2=samples_unsuccessful2,
+                       inds_to_choose=inds_to_choose,
+                       times_chosen=times_chosen,
+                       behavioural_diversity=behavioural_diversity,
+                       max_n_wraps_valid=max_n_wraps_valid,
+                       avg_n_wraps_valid=avg_n_wraps_valid,
+                       max_n_wraps_pop=max_n_wraps_pop,
+                       avg_n_wraps_pop=avg_n_wraps_pop,
+                       selection_time=selection_time, selection_method=selection_method, 
+                       generation_time=generation_time)
+                
+        if verbose:
+            print(logbook.stream)
+
+    return population, logbook
