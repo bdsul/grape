@@ -9,7 +9,23 @@ Created on Wed Jul  7 10:31:49 2021
 import numpy as np
 import math
 
-# Define new functions
+def WA(a, b, x):
+    return x*a+(1-x)*b
+
+def OWA(a, b, x):
+    return x*np.maximum(a, b)+(1-x)*np.minimum(a, b)
+
+def minimum(a, b):
+    return np.minimum(a, b)
+
+def maximum(a, b):
+    return np.maximum(a, b)
+    
+def dilator(b):
+    return b**0.5
+
+def concentrator(b):
+    return b**2
 
 def div(a, b):
     result = np.where(a == 0, np.ones_like(a), a / b)
@@ -43,23 +59,11 @@ def protected_div(left, right):
     except ZeroDivisionError:
         return 1
     
-#def protected_div(left, right):
-#    try:
-#        return left / right
-#    except ZeroDivisionError:
-#        return 1
-
 def psin(n):
-    #try:
     return np.sin(n)
-    #except Exception:
-    #    return np.nan
 
 def pcos(n):
-    #try:
     return np.cos(n)
-    #except Exception:
-    #    return np.nan
 
 def add(a, b):
     return np.add(a,b)
@@ -102,3 +106,7 @@ def greater_than_or_equal(a, b):
 
 def less_than_or_equal(a, b):
     return a <= b
+
+def if_(i, o0, o1):
+    """If _ than _ else _"""
+    return np.where(i, o0, o1)
