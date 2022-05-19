@@ -284,9 +284,9 @@ def sensible_initialisation(ind_class, pop_size, bnf_grammar, min_init_depth, ma
                 #Initialise the individual and include in the population
                 ind = ind_class(genome, bnf_grammar, max_init_depth_)
                 
-                #TODO check if remainders is equal to structure
+                #Check if the individual was mapped correctly
                 if remainders != ind.structure or phenotype != ind.phenotype or max(depths) != ind.depth:
-                    print("error")
+                    raise Exception('error in the mapping')
                     
                 population.append(ind)    
             
