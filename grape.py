@@ -9,6 +9,7 @@ import re
 import math
 from operator import attrgetter
 import numpy as np
+import random
 
 class Individual(object):
     """
@@ -205,6 +206,21 @@ def mapper(genome, grammar, max_depth):
    
     return phenotype, nodes, depth, used_codons, invalid, 0, structure
 
+def random_initialisation(ind_class, pop_size, bnf_grammar, init_genome_length, max_init_depth, codon_size):
+        """
+        
+        """
+        population = []
+        
+        for i in range(pop_size):
+            genome = []
+            for j in range(init_genome_length):
+                genome.append(random.randint(0, codon_size))
+            ind = ind_class(genome, bnf_grammar, max_init_depth)
+            population.append(ind)
+            
+        return population
+    
 def sensible_initialisation(ind_class, pop_size, bnf_grammar, min_init_depth, max_init_depth, codon_size):
         """
         
@@ -218,17 +234,15 @@ def sensible_initialisation(ind_class, pop_size, bnf_grammar, min_init_depth, ma
         set_size = int(n_grow/n_sets_grow)
         remaining = n_grow % n_sets_grow
         
-        n_full = n_grow + is_odd + remaining#if pop_size is odd, generate an extra ind with "full"
+        n_full = n_grow + is_odd + remaining #if pop_size is odd, generate an extra ind with "full"
         
         #TODO check if it is possible to generate inds with max_init_depth
         
         population = []
         #Generate inds using "Grow"
         for i in range(n_sets_grow):
-            
+            max_init_depth_ = min_init_depth + i
             for j in range(set_size):
-                max_init_depth_ = min_init_depth + i
-                
                 remainders = [] #it will register the choices
                 possible_choices = [] #it will register the respective possible choices
     
@@ -284,12 +298,10 @@ def sensible_initialisation(ind_class, pop_size, bnf_grammar, min_init_depth, ma
             remaining_NTs = ['<' + term + '>' for term in re.findall(r"\<(\w+)\>",phenotype)] #
             depths = [1]*len(remaining_NTs) #it keeps the depth of each branch
             idx_branch = 0 #index of the current branch being grown
-#            print(phenotype)
-#            print(depths)
+
             while len(remaining_NTs) != 0:
                 idx_NT = bnf_grammar.non_terminals.index(remaining_NTs[0])
                 total_options = [PR for PR in bnf_grammar.production_rules[idx_NT]]
- #               print(phenotype, depths, idx_branch)
                 actual_options = [PR for PR in bnf_grammar.production_rules[idx_NT] if PR[5] + depths[idx_branch] <= max_init_depth]
                 recursive_options = [PR for PR in actual_options if PR[4]]
                 if len(recursive_options) > 0:
@@ -298,7 +310,6 @@ def sensible_initialisation(ind_class, pop_size, bnf_grammar, min_init_depth, ma
                     Ch = random.choice(actual_options)
                 phenotype = phenotype.replace(remaining_NTs[0], Ch[0], 1)
                 depths[idx_branch] += 1
-#                print(phenotype)
                 remainders.append(Ch[3])
                 possible_choices.append(len(total_options))
                 
@@ -307,20 +318,10 @@ def sensible_initialisation(ind_class, pop_size, bnf_grammar, min_init_depth, ma
                         depths = [depths[idx_branch],]*Ch[2] + depths[idx_branch+1:]
                     else:
                         depths = depths[0:idx_branch] + [depths[idx_branch],]*Ch[2] + depths[idx_branch+1:]
-                #print(depths)
                 if Ch[1] == 'terminal':
-#                    print("next branch")
                     idx_branch += 1
                 
-                
-                
-                
                 remaining_NTs = ['<' + term + '>' for term in re.findall(r"\<(\w+)\>",phenotype)]
-#                print(len(remaining_NTs))
-            
-#            print()
-#            print(remainders)
-#            print(possible_choices)
             
             #Generate the genome
             genome = []
@@ -332,25 +333,14 @@ def sensible_initialisation(ind_class, pop_size, bnf_grammar, min_init_depth, ma
             size_tail = int(0.5*len(genome))
             for j in range(size_tail):
                 genome.append(random.randint(0,codon_size))
-            
-#            print(genome)
                 
             #Initialise the individual and include in the population
             ind = ind_class(genome, bnf_grammar, max_init_depth)
             
-#            print("init", depths)
-#            print(max(depths), phenotype)
-            
-            #TODO check if remainders is equal to structure
+            #Check if the individual was mapped correctly
             if remainders != ind.structure or phenotype != ind.phenotype or max(depths) != ind.depth:
-                print("error")
+                raise Exception('error in the mapping')
                 
-#            print(ind.genome)
-#            print(ind.phenotype)
-#            input("enter")
-                
-#            print("ind:", i, "depth:", max(depths))
-
             population.append(ind)    
     
         return population
@@ -504,15 +494,15 @@ def PI_Grow(ind_class, pop_size, bnf_grammar, min_init_depth, max_init_depth, co
             #Initialise the individual and include in the population
             ind = ind_class(genome, bnf_grammar, max_init_depth_)
             
+            #Check if the individual was mapped correctly
             if remainders != ind.structure or phenotype != ind.phenotype or max(depths) != ind.depth:
-                print("error with the mapping")
-                print(remainders != ind.structure, phenotype != ind.phenotype, max(depths) != ind.depth)
+                raise Exception('error in the mapping')
                 
             population.append(ind)   
     
     return population
     
-def crossover_onepoint(parent0, parent1, bnf_grammar, max_depth, max_wraps):
+def crossover_onepoint(parent0, parent1, bnf_grammar, max_depth):
     """
     
     """
@@ -535,14 +525,14 @@ def crossover_onepoint(parent0, parent1, bnf_grammar, max_depth, max_wraps):
         new_genome0 = parent0.genome[0:point0] + parent1.genome[point1:]
         new_genome1 = parent1.genome[0:point1] + parent0.genome[point0:]
         
-        new_ind0 = reMap(parent0, new_genome0, bnf_grammar, max_depth, max_wraps)
-        new_ind1 = reMap(parent1, new_genome1, bnf_grammar, max_depth, max_wraps)
+        new_ind0 = reMap(parent0, new_genome0, bnf_grammar, max_depth)
+        new_ind1 = reMap(parent1, new_genome1, bnf_grammar, max_depth)
         
         continue_ = new_ind0.depth > max_depth or new_ind1.depth > max_depth
 
     return new_ind0, new_ind1   
 
-def mutation_int_flip_per_codon(ind, indpb, codon_size, bnf_grammar, max_depth, max_wraps):
+def mutation_int_flip_per_codon(ind, mut_probability, codon_size, bnf_grammar, max_depth):
     """
 
     """
@@ -555,17 +545,17 @@ def mutation_int_flip_per_codon(ind, indpb, codon_size, bnf_grammar, max_depth, 
 
     while continue_:
         for i in range(possible_mutation_codons):
-            if random.random() < indpb:
+            if random.random() < mut_probability:
                 ind.genome[i] = random.randint(0, codon_size)
     
-        new_ind = reMap(ind, ind.genome, bnf_grammar, max_depth, max_wraps)
+        new_ind = reMap(ind, ind.genome, bnf_grammar, max_depth)
         
         continue_ = new_ind.depth > max_depth
 
     return new_ind,
 
 
-def reMap(ind, genome, bnf_grammar, max_tree_depth, max_wraps):
+def reMap(ind, genome, bnf_grammar, max_tree_depth):
     ind.genome = genome
     ind.phenotype, ind.nodes, ind.depth, ind.used_codons, ind.invalid, \
                 ind.n_wraps, ind.structure = mapper(genome, bnf_grammar, max_tree_depth)
