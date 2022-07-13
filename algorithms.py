@@ -17,6 +17,7 @@ import random
 import math
 import numpy as np
 import time
+import warnings
 
 from deap import tools
 
@@ -53,6 +54,11 @@ def varAnd(population, toolbox, cxpb, mutpb,
 
     return offspring
 
+class hofWarning(UserWarning):
+    pass
+
+
+
 def ge_eaSimpleWithElitism(population, toolbox, cxpb, mutpb, ngen, elite_size, 
                 bnf_grammar, codon_size, max_tree_depth, 
                 points_train, points_test=None, stats=None, halloffame=None, 
@@ -82,10 +88,22 @@ def ge_eaSimpleWithElitism(population, toolbox, cxpb, mutpb, ngen, elite_size,
     """
     
     logbook = tools.Logbook()
-    if points_test:
-        logbook.header = ['gen', 'invalid'] + (stats.fields if stats else []) + ['fitness_test', 'best_ind_length', 'avg_length', 'best_ind_nodes', 'avg_nodes', 'best_ind_depth', 'avg_depth', 'avg_used_codons', 'best_ind_used_codons', 'structural_diversity', 'fitness_diversity', 'selection_time', 'generation_time']
+    
+    if halloffame is None:
+        if elite_size != 0:
+            raise ValueError("You should add a hof object to use elitism.") 
+        else:
+            warnings.warn('You will not register results of the best individual while not using a hof object.', hofWarning)
+            logbook.header = ['gen', 'invalid'] + (stats.fields if stats else []) + ['avg_length', 'avg_nodes', 'avg_depth', 'avg_used_codons', 'structural_diversity', 'fitness_diversity', 'selection_time', 'generation_time']
     else:
-        logbook.header = ['gen', 'invalid'] + (stats.fields if stats else []) + ['best_ind_length', 'avg_length', 'best_ind_nodes', 'avg_nodes', 'best_ind_depth', 'avg_depth', 'avg_used_codons', 'best_ind_used_codons', 'structural_diversity', 'fitness_diversity', 'selection_time', 'generation_time']
+        if halloffame.maxsize < 1:
+            raise ValueError("HALLOFFAME_SIZE should be greater or equal to 1")
+        if elite_size > halloffame.maxsize:
+            raise ValueError("HALLOFFAME_SIZE should be greater or equal to ELITE_SIZE")         
+        if points_test:
+            logbook.header = ['gen', 'invalid'] + (stats.fields if stats else []) + ['fitness_test', 'best_ind_length', 'avg_length', 'best_ind_nodes', 'avg_nodes', 'best_ind_depth', 'avg_depth', 'avg_used_codons', 'best_ind_used_codons', 'structural_diversity', 'fitness_diversity', 'selection_time', 'generation_time']
+        else:
+            logbook.header = ['gen', 'invalid'] + (stats.fields if stats else []) + ['best_ind_length', 'avg_length', 'best_ind_nodes', 'avg_nodes', 'best_ind_depth', 'avg_depth', 'avg_used_codons', 'best_ind_used_codons', 'structural_diversity', 'fitness_diversity', 'selection_time', 'generation_time']
 
     start_gen = time.time()        
     # Evaluate the individuals with an invalid fitness
@@ -114,26 +132,24 @@ def ge_eaSimpleWithElitism(population, toolbox, cxpb, mutpb, ngen, elite_size,
     # Update the hall of fame with the generated individuals
     if halloffame is not None:
         halloffame.update(valid)
+        best_ind_length = len(halloffame.items[0].genome) 
+        best_ind_nodes = halloffame.items[0].nodes
+        best_ind_depth = halloffame.items[0].depth
+        best_ind_used_codons = halloffame.items[0].used_codons
+        if not verbose:
+            print("gen =", 0, ", Fitness =", halloffame.items[0].fitness.values)
     
     length = [len(ind.genome) for ind in valid]
     avg_length = sum(length)/len(length)
-    best_ind_length = len(halloffame.items[0].genome)
     
     nodes = [ind.nodes for ind in valid]
-    best_ind_nodes = halloffame.items[0].nodes
     avg_nodes = sum(nodes)/len(nodes)
-
     
     depth = [ind.depth for ind in valid]
-    best_ind_depth = halloffame.items[0].depth
     avg_depth = sum(depth)/len(depth)
     
     used_codons = [ind.used_codons for ind in valid]
     avg_used_codons = sum(used_codons)/len(used_codons)
-    best_ind_used_codons = halloffame.items[0].used_codons
-    
-    if not verbose:
-        print("gen =", 0, ", Fitness =", halloffame.items[0].fitness.values)
     
     end_gen = time.time()
     generation_time = end_gen-start_gen
@@ -196,7 +212,8 @@ def ge_eaSimpleWithElitism(population, toolbox, cxpb, mutpb, ngen, elite_size,
                 
         #Update population for next generation
         population[:] = offspring
-        for i in range(len(halloffame)):
+        #Include in the population the elitist individuals
+        for i in range(elite_size):
             population.append(halloffame.items[i])
             
         invalid = 0
@@ -220,32 +237,30 @@ def ge_eaSimpleWithElitism(population, toolbox, cxpb, mutpb, ngen, elite_size,
         # Update the hall of fame with the generated individuals
         if halloffame is not None:
             halloffame.update(valid)
+            best_ind_length = len(halloffame.items[0].genome)
+            best_ind_nodes = halloffame.items[0].nodes
+            best_ind_depth = halloffame.items[0].depth
+            best_ind_used_codons = halloffame.items[0].used_codons
+            if not verbose:
+                print("gen =", gen, ", Fitness =", halloffame.items[0].fitness.values)
+            if points_test:
+                if gen < ngen:
+                    fitness_test = np.NaN
+                else:
+                    fitness_test = toolbox.evaluate(halloffame.items[0], points_test)[0]
             
         length = [len(ind.genome) for ind in valid]
         avg_length = sum(length)/len(length)
-        best_ind_length = len(halloffame.items[0].genome)
         
         nodes = [ind.nodes for ind in valid]
-        best_ind_nodes = halloffame.items[0].nodes
         avg_nodes = sum(nodes)/len(nodes)
         
         depth = [ind.depth for ind in valid]
-        best_ind_depth = halloffame.items[0].depth
         avg_depth = sum(depth)/len(depth)
         
         used_codons = [ind.used_codons for ind in valid]
         avg_used_codons = sum(used_codons)/len(used_codons)
-        best_ind_used_codons = halloffame.items[0].used_codons
         
-        if not verbose:
-            print("gen =", gen, ", Fitness =", halloffame.items[0].fitness.values)
-        
-        if points_test:
-            if gen < ngen:
-                fitness_test = np.NaN
-            else:
-                fitness_test = toolbox.evaluate(halloffame.items[0], points_test)[0]
-
         end_gen = time.time()
         generation_time = end_gen-start_gen
         

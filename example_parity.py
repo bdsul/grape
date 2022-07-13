@@ -14,6 +14,8 @@ import pandas as pd
 import numpy as np
 from deap import creator, base, tools
 
+import random
+
 problem = 'parity3'
 
 if problem == 'parity3':
@@ -114,10 +116,13 @@ toolbox.register("mate", grape.crossover_onepoint)
 toolbox.register("mutate", grape.mutation_int_flip_per_codon)
 
 POPULATION_SIZE = 1000
-MAX_GENERATIONS = 20
+MAX_GENERATIONS = 200
 P_CROSSOVER = 0.8
 P_MUTATION = 0.01
-ELITE_SIZE = round(0.01*POPULATION_SIZE)
+ELITE_SIZE = round(0.01*POPULATION_SIZE) #it should be smaller or equal to HALLOFFAME_SIZE
+HALLOFFAME_SIZE = round(0.01*POPULATION_SIZE) #it should be at least 1
+
+RANDOM_SEED = 0 #Pay attention that the seed is set up inside the loop of runs, so you are going to have similar runs
 
 INIT_GENOME_LENGTH = 30 #used only for random initialisation
 random_initilisation = False #put True if you use random initialisation
@@ -135,7 +140,9 @@ for i in range(N_RUNS):
     print()
     print("Run:", i+1)
     print()
-
+    
+    random.seed(RANDOM_SEED) #Comment this line or set a different RANDOM_SEED each run if you want distinct results
+    
     # create initial population (generation 0):
     if random_initilisation:
         population = toolbox.populationCreator(pop_size=POPULATION_SIZE, 
@@ -153,7 +160,7 @@ for i in range(N_RUNS):
                                             )
     
     # define the hall-of-fame object:
-    hof = tools.HallOfFame(ELITE_SIZE)
+    hof = tools.HallOfFame(HALLOFFAME_SIZE)
     
     # prepare the statistics object:
     stats = tools.Statistics(key=lambda ind: ind.fitness.values)
