@@ -22,7 +22,7 @@ import warnings
 from deap import tools
 
 def varAnd(population, toolbox, cxpb, mutpb,
-           bnf_grammar, codon_size, max_tree_depth):
+           bnf_grammar, codon_size, max_tree_depth, codon_consumption):
     """Part of an evolutionary algorithm applying only the variation part
     (crossover **and** mutation). The modified individuals have their
     fitness invalidated. The individuals are cloned so returned population is
@@ -44,12 +44,15 @@ def varAnd(population, toolbox, cxpb, mutpb,
         if random.random() < cxpb:
             offspring[i - 1], offspring[i] = toolbox.mate(offspring[i - 1],
                                                           offspring[i],
-                                                          bnf_grammar, max_tree_depth)
+                                                          bnf_grammar, 
+                                                          max_tree_depth, 
+                                                          codon_consumption)
             del offspring[i - 1].fitness.values, offspring[i].fitness.values
 
     for i in range(len(offspring)):
         offspring[i], = toolbox.mutate(offspring[i], mutpb,
-                                       codon_size, bnf_grammar, max_tree_depth)
+                                       codon_size, bnf_grammar, 
+                                       max_tree_depth, codon_consumption)
         del offspring[i].fitness.values
 
     return offspring
@@ -61,7 +64,8 @@ class hofWarning(UserWarning):
 
 def ge_eaSimpleWithElitism(population, toolbox, cxpb, mutpb, ngen, elite_size, 
                 bnf_grammar, codon_size, max_tree_depth, 
-                points_train, points_test=None, stats=None, halloffame=None, 
+                points_train, points_test=None, codon_consumption='eager', 
+                stats=None, halloffame=None, 
                 verbose=__debug__):
     """This algorithm reproduce the simplest evolutionary algorithm as
     presented in chapter 7 of [Back2000]_, with some adaptations to run GE
@@ -199,10 +203,10 @@ def ge_eaSimpleWithElitism(population, toolbox, cxpb, mutpb, ngen, elite_size,
         offspring = toolbox.select(population, len(population)-elite_size)
         end = time.time()
         selection_time = end-start
-
+        print(codon_consumption)
         # Vary the pool of individuals
         offspring = varAnd(offspring, toolbox, cxpb, mutpb,
-                           bnf_grammar, codon_size, max_tree_depth)
+                           bnf_grammar, codon_size, max_tree_depth, codon_consumption)
 
         # Evaluate the individuals with an invalid fitness
         for ind in offspring:

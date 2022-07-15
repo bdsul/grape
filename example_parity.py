@@ -100,8 +100,8 @@ creator.create("FitnessMin", base.Fitness, weights=(-1.0,))
 
 creator.create('Individual', grape.Individual, fitness=creator.FitnessMin)
 
-toolbox.register("populationCreator", grape.sensible_initialisation, creator.Individual) 
-#toolbox.register("populationCreator", grape.random_initialisation, creator.Individual) 
+#toolbox.register("populationCreator", grape.sensible_initialisation, creator.Individual) 
+toolbox.register("populationCreator", grape.random_initialisation, creator.Individual) 
 #toolbox.register("populationCreator", grape.PI_Grow, creator.Individual) 
 
 toolbox.register("evaluate", fitness_eval)
@@ -122,10 +122,11 @@ P_MUTATION = 0.01
 ELITE_SIZE = round(0.01*POPULATION_SIZE) #it should be smaller or equal to HALLOFFAME_SIZE
 HALLOFFAME_SIZE = round(0.01*POPULATION_SIZE) #it should be at least 1
 
+CODON_CONSUMPTION = 'lazy'
 RANDOM_SEED = 0 #Pay attention that the seed is set up inside the loop of runs, so you are going to have similar runs
 
 INIT_GENOME_LENGTH = 30 #used only for random initialisation
-random_initilisation = False #put True if you use random initialisation
+random_initilisation = True #put True if you use random initialisation
 
 MAX_INIT_TREE_DEPTH = 10
 MIN_INIT_TREE_DEPTH = 2
@@ -149,14 +150,16 @@ for i in range(N_RUNS):
                                            bnf_grammar=BNF_GRAMMAR, 
                                            init_genome_length=INIT_GENOME_LENGTH,
                                            max_init_depth=MAX_TREE_DEPTH, 
-                                           codon_size=CODON_SIZE
+                                           codon_size=CODON_SIZE,
+                                           codon_consumption=CODON_CONSUMPTION
                                            )
     else:
         population = toolbox.populationCreator(pop_size=POPULATION_SIZE, 
                                            bnf_grammar=BNF_GRAMMAR, 
                                            min_init_depth=MIN_INIT_TREE_DEPTH,
                                            max_init_depth=MAX_INIT_TREE_DEPTH,
-                                           codon_size=CODON_SIZE
+                                           codon_size=CODON_SIZE,
+                                           codon_consumption=CODON_CONSUMPTION
                                             )
     
     # define the hall-of-fame object:
@@ -172,9 +175,11 @@ for i in range(N_RUNS):
     # perform the Grammatical Evolution flow:
     population, logbook = algorithms.ge_eaSimpleWithElitism(population, toolbox, cxpb=P_CROSSOVER, mutpb=P_MUTATION,
                                               ngen=MAX_GENERATIONS, elite_size=ELITE_SIZE,
-                                              bnf_grammar=BNF_GRAMMAR, codon_size=CODON_SIZE, 
+                                              bnf_grammar=BNF_GRAMMAR, 
+                                              codon_size=CODON_SIZE, 
                                               max_tree_depth=MAX_TREE_DEPTH,
                                               points_train=[X_train, Y_train], 
+                                              codon_consumption=CODON_CONSUMPTION,
                                               stats=stats, halloffame=hof, verbose=False)
     
     import textwrap
