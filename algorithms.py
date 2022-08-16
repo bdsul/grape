@@ -203,7 +203,6 @@ def ge_eaSimpleWithElitism(population, toolbox, cxpb, mutpb, ngen, elite_size,
         offspring = toolbox.select(population, len(population)-elite_size)
         end = time.time()
         selection_time = end-start
-        print(codon_consumption)
         # Vary the pool of individuals
         offspring = varAnd(offspring, toolbox, cxpb, mutpb,
                            bnf_grammar, codon_size, max_tree_depth, codon_consumption)
