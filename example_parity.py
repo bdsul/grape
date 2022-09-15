@@ -72,7 +72,7 @@ def mae(y, yhat):
 
     return 1 - np.mean(compare)
 
-def fitness_eval(individual, points):
+def fitness_eval(individual, points, penalty_divisor, penalise_greater_than):
     x = points[0]
     Y = points[1]
     
@@ -90,6 +90,10 @@ def fitness_eval(individual, points):
     assert np.isrealobj(pred)
     
     fitness = mae(Y, pred)
+    individual.fitness_each_sample = np.equal(Y, pred)
+    
+    if len(individual.genome) > penalise_greater_than:
+        fitness += fitness / penalty_divisor
     
     return fitness,
 
@@ -100,11 +104,11 @@ creator.create("FitnessMin", base.Fitness, weights=(-1.0,))
 
 creator.create('Individual', grape.Individual, fitness=creator.FitnessMin)
 
-#toolbox.register("populationCreator", grape.sensible_initialisation, creator.Individual) 
-toolbox.register("populationCreator", grape.random_initialisation, creator.Individual) 
+toolbox.register("populationCreator", grape.sensible_initialisation, creator.Individual) 
+#toolbox.register("populationCreator", grape.random_initialisation, creator.Individual) 
 #toolbox.register("populationCreator", grape.PI_Grow, creator.Individual) 
 
-toolbox.register("evaluate", fitness_eval)
+toolbox.register("evaluate", fitness_eval, penalty_divisor=10000, penalise_greater_than=100)
 
 # Tournament selection:
 toolbox.register("select", tools.selTournament, tournsize=6)
@@ -116,7 +120,7 @@ toolbox.register("mate", grape.crossover_onepoint)
 toolbox.register("mutate", grape.mutation_int_flip_per_codon)
 
 POPULATION_SIZE = 1000
-MAX_GENERATIONS = 200
+MAX_GENERATIONS = 50
 P_CROSSOVER = 0.8
 P_MUTATION = 0.01
 ELITE_SIZE = round(0.01*POPULATION_SIZE) #it should be smaller or equal to HALLOFFAME_SIZE
@@ -125,14 +129,28 @@ HALLOFFAME_SIZE = round(0.01*POPULATION_SIZE) #it should be at least 1
 CODON_CONSUMPTION = 'lazy'
 RANDOM_SEED = 0 #Pay attention that the seed is set up inside the loop of runs, so you are going to have similar runs
 
-INIT_GENOME_LENGTH = 30 #used only for random initialisation
-random_initilisation = True #put True if you use random initialisation
+MIN_INIT_GENOME_LENGTH = 30 #used only for random initialisation
+MAX_INIT_GENOME_LENGTH = 50
+random_initilisation = False #put True if you use random initialisation
 
-MAX_INIT_TREE_DEPTH = 10
-MIN_INIT_TREE_DEPTH = 2
-MAX_TREE_DEPTH = 90
+MAX_INIT_TREE_DEPTH = 13 #equivalent to 6 in GP with this grammar
+MIN_INIT_TREE_DEPTH = 3
+MAX_TREE_DEPTH = 35 #equivalent to 17 in GP with this grammar
 MAX_WRAPS = 0
 CODON_SIZE = 255
+
+CODON_CONSUMPTION = 'lazy'
+GENOME_REPRESENTATION = 'numpy'
+MAX_GENOME_LENGTH = None
+
+REPORT_ITEMS = ['gen', 'invalid', 'avg', 'std', 'min', 'max', 
+          'best_ind_length', 'avg_length', 
+          'best_ind_nodes', 'avg_nodes', 
+          'best_ind_depth', 'avg_depth', 
+          'avg_used_codons', 'best_ind_used_codons', 
+          'behavioural_diversity',
+          'structural_diversity', 'fitness_diversity',
+          'selection_time', 'generation_time']
 
 N_RUNS = 3
 
@@ -148,10 +166,12 @@ for i in range(N_RUNS):
     if random_initilisation:
         population = toolbox.populationCreator(pop_size=POPULATION_SIZE, 
                                            bnf_grammar=BNF_GRAMMAR, 
-                                           init_genome_length=INIT_GENOME_LENGTH,
+                                           min_init_genome_length=MIN_INIT_GENOME_LENGTH,
+                                           max_init_genome_length=MAX_INIT_GENOME_LENGTH,
                                            max_init_depth=MAX_TREE_DEPTH, 
                                            codon_size=CODON_SIZE,
-                                           codon_consumption=CODON_CONSUMPTION
+                                           codon_consumption=CODON_CONSUMPTION,
+                                           genome_representation=GENOME_REPRESENTATION
                                            )
     else:
         population = toolbox.populationCreator(pop_size=POPULATION_SIZE, 
@@ -159,7 +179,8 @@ for i in range(N_RUNS):
                                            min_init_depth=MIN_INIT_TREE_DEPTH,
                                            max_init_depth=MAX_INIT_TREE_DEPTH,
                                            codon_size=CODON_SIZE,
-                                           codon_consumption=CODON_CONSUMPTION
+                                           codon_consumption=CODON_CONSUMPTION,
+                                           genome_representation=GENOME_REPRESENTATION
                                             )
     
     # define the hall-of-fame object:
@@ -178,8 +199,11 @@ for i in range(N_RUNS):
                                               bnf_grammar=BNF_GRAMMAR, 
                                               codon_size=CODON_SIZE, 
                                               max_tree_depth=MAX_TREE_DEPTH,
+                                              max_genome_length=MAX_GENOME_LENGTH,
                                               points_train=[X_train, Y_train], 
                                               codon_consumption=CODON_CONSUMPTION,
+                                              report_items=REPORT_ITEMS,
+                                              genome_representation=GENOME_REPRESENTATION,                                              
                                               stats=stats, halloffame=hof, verbose=False)
     
     import textwrap
@@ -207,19 +231,14 @@ for i in range(N_RUNS):
     best_ind_depth = logbook.select("best_ind_depth")
     avg_depth = logbook.select("avg_depth")
 
+    behavioural_diversity = logbook.select("behavioural_diversity") 
     structural_diversity = logbook.select("structural_diversity") 
+    fitness_diversity = logbook.select("fitness_diversity")     
     
     import csv
-    import random
-    r = random.randint(1,1e10)
+    r = RANDOM_SEED
     
-    header = ['gen', 'invalid', 'avg', 'std', 'min', 'max',
-              'best_ind_length', 'avg_length', 
-              'best_ind_nodes', 'avg_nodes', 
-              'best_ind_depth', 'avg_depth', 
-              'avg_used_codons', 'best_ind_used_codons', 
-              'structural_diversity',
-              'selection_time', 'generation_time']
+    header = REPORT_ITEMS
     with open("results/" + str(r) + ".csv", "w", encoding='UTF8', newline='') as csvfile:
         writer = csv.writer(csvfile, delimiter='\t')
         writer.writerow(header)
@@ -235,6 +254,8 @@ for i in range(N_RUNS):
                              avg_depth[value],
                              avg_used_codons[value],
                              best_ind_used_codons[value], 
+                             behavioural_diversity[value],
                              structural_diversity[value],
+                             fitness_diversity[value],
                              selection_time[value], 
                              generation_time[value]])

@@ -1,0 +1,5 @@
+<e>  ::=  <op> | <x>
+<op> ::=  v8a(<e>,<e>)|
+          frog(<e>, lawnmower, square64)|
+          progn(<e>,<e>)
+<x> ::=   left(lawnmower) | mow(lawnmower, square64) | rv8()

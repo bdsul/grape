@@ -22,7 +22,8 @@ import warnings
 from deap import tools
 
 def varAnd(population, toolbox, cxpb, mutpb,
-           bnf_grammar, codon_size, max_tree_depth, codon_consumption):
+           bnf_grammar, codon_size, max_tree_depth, codon_consumption,
+           genome_representation, max_genome_length):
     """Part of an evolutionary algorithm applying only the variation part
     (crossover **and** mutation). The modified individuals have their
     fitness invalidated. The individuals are cloned so returned population is
@@ -46,13 +47,16 @@ def varAnd(population, toolbox, cxpb, mutpb,
                                                           offspring[i],
                                                           bnf_grammar, 
                                                           max_tree_depth, 
-                                                          codon_consumption)
+                                                          codon_consumption,
+                                                          genome_representation,
+                                                          max_genome_length)
             del offspring[i - 1].fitness.values, offspring[i].fitness.values
 
     for i in range(len(offspring)):
         offspring[i], = toolbox.mutate(offspring[i], mutpb,
                                        codon_size, bnf_grammar, 
-                                       max_tree_depth, codon_consumption)
+                                       max_tree_depth, codon_consumption,
+                                       max_genome_length)
         del offspring[i].fitness.values
 
     return offspring
@@ -60,11 +64,12 @@ def varAnd(population, toolbox, cxpb, mutpb,
 class hofWarning(UserWarning):
     pass
 
-
-
 def ge_eaSimpleWithElitism(population, toolbox, cxpb, mutpb, ngen, elite_size, 
                 bnf_grammar, codon_size, max_tree_depth, 
-                points_train, points_test=None, codon_consumption='eager', 
+                max_genome_length=None,
+                points_train=None, points_test=None, codon_consumption='eager', 
+                report_items=None,
+                genome_representation='list',
                 stats=None, halloffame=None, 
                 verbose=__debug__):
     """This algorithm reproduce the simplest evolutionary algorithm as
@@ -98,41 +103,53 @@ def ge_eaSimpleWithElitism(population, toolbox, cxpb, mutpb, ngen, elite_size,
             raise ValueError("You should add a hof object to use elitism.") 
         else:
             warnings.warn('You will not register results of the best individual while not using a hof object.', hofWarning)
-            logbook.header = ['gen', 'invalid'] + (stats.fields if stats else []) + ['avg_length', 'avg_nodes', 'avg_depth', 'avg_used_codons', 'structural_diversity', 'fitness_diversity', 'selection_time', 'generation_time']
+            logbook.header = ['gen', 'invalid'] + (stats.fields if stats else []) + ['avg_length', 'avg_nodes', 'avg_depth', 'avg_used_codons', 'behavioural_diversity', 'structural_diversity', 'fitness_diversity', 'selection_time', 'generation_time']
     else:
         if halloffame.maxsize < 1:
             raise ValueError("HALLOFFAME_SIZE should be greater or equal to 1")
         if elite_size > halloffame.maxsize:
             raise ValueError("HALLOFFAME_SIZE should be greater or equal to ELITE_SIZE")         
         if points_test:
-            logbook.header = ['gen', 'invalid'] + (stats.fields if stats else []) + ['fitness_test', 'best_ind_length', 'avg_length', 'best_ind_nodes', 'avg_nodes', 'best_ind_depth', 'avg_depth', 'avg_used_codons', 'best_ind_used_codons', 'structural_diversity', 'fitness_diversity', 'selection_time', 'generation_time']
+            logbook.header = ['gen', 'invalid'] + (stats.fields if stats else []) + ['fitness_test', 'best_ind_length', 'avg_length', 'best_ind_nodes', 'avg_nodes', 'best_ind_depth', 'avg_depth', 'avg_used_codons', 'best_ind_used_codons', 'behavioural_diversity', 'structural_diversity', 'fitness_diversity', 'selection_time', 'generation_time']
         else:
-            logbook.header = ['gen', 'invalid'] + (stats.fields if stats else []) + ['best_ind_length', 'avg_length', 'best_ind_nodes', 'avg_nodes', 'best_ind_depth', 'avg_depth', 'avg_used_codons', 'best_ind_used_codons', 'structural_diversity', 'fitness_diversity', 'selection_time', 'generation_time']
+            logbook.header = ['gen', 'invalid'] + (stats.fields if stats else []) + ['best_ind_length', 'avg_length', 'best_ind_nodes', 'avg_nodes', 'best_ind_depth', 'avg_depth', 'avg_used_codons', 'best_ind_used_codons', 'behavioural_diversity', 'structural_diversity', 'fitness_diversity', 'selection_time', 'generation_time']
 
     start_gen = time.time()        
     # Evaluate the individuals with an invalid fitness
     for ind in population:
         if not ind.fitness.valid:
-            invalid_ind = ind
-            ind.fitness.values = toolbox.evaluate(invalid_ind, points_train)
+            ind.fitness.values = toolbox.evaluate(ind, points_train)
         
-    invalid = 0
+    valid0 = [ind for ind in population if not ind.invalid]
+    valid = [ind for ind in valid0 if not math.isnan(ind.fitness.values[0])]
+    if len(valid0) != len(valid):
+        warnings.warn("Warning: There are valid individuals with fitness = NaN in the population. We will avoid them.")
+    invalid = len(population) - len(valid0) #We use the original number of invalids in this case, because we just want to count the completely mapped individuals    
+    
     list_structures = []
-    list_fitnesses = []
-    for ind in population:
-        if ind.invalid == True:
-            invalid += 1
-        else:
-            list_structures.append(str(ind.structure))
+    if 'fitness_diversity' in report_items:
+        list_fitnesses = []
+    if 'behavioural_diversity' in report_items:
+        behaviours = np.zeros([len(valid), len(valid[0].fitness_each_sample)], dtype=float)
+    
+    #for ind in offspring:
+    for idx, ind in enumerate(valid):
+        list_structures.append(str(ind.structure))
+        if 'fitness_diversity' in report_items:
             list_fitnesses.append(str(ind.fitness.values[0]))
+        if 'behavioural_diversity' in report_items:
+            behaviours[idx, :] = ind.fitness_each_sample
+            
     unique_structures = np.unique(list_structures, return_counts=False)  
-    unique_fitnesses = np.unique(list_fitnesses, return_counts=False)  
+    if 'fitness_diversity' in report_items:
+        unique_fitnesses = np.unique(list_fitnesses, return_counts=False) 
+    if 'behavioural_diversity' in report_items:
+        unique_behaviours = np.unique(behaviours, axis=0)
     
     structural_diversity = len(unique_structures)/len(population)
-    fitness_diversity = len(unique_fitnesses)/(len(points_train[1])+1) #TODO generalise for other problems, because it only works if the fitness is proportional to the number of testcases correctly predicted
-    
-    valid = [ind for ind in population if not math.isnan(ind.fitness.values[0])]
-    
+    fitness_diversity = len(unique_fitnesses)/(len(points_train[1])+1) if 'fitness_diversity' in report_items else 0 #TODO generalise for other problems, because it only works if the fitness is proportional to the number of testcases correctly predicted
+    behavioural_diversity = len(unique_behaviours)/len(population) if 'behavioural_diversity' in report_items else 0
+
     # Update the hall of fame with the generated individuals
     if halloffame is not None:
         halloffame.update(valid)
@@ -174,6 +191,7 @@ def ge_eaSimpleWithElitism(population, toolbox, cxpb, mutpb, ngen, elite_size,
                        avg_depth=avg_depth,
                        avg_used_codons=avg_used_codons,
                        best_ind_used_codons=best_ind_used_codons,
+                       behavioural_diversity=behavioural_diversity,
                        structural_diversity=structural_diversity,
                        fitness_diversity=fitness_diversity,
                        selection_time=selection_time, 
@@ -187,6 +205,7 @@ def ge_eaSimpleWithElitism(population, toolbox, cxpb, mutpb, ngen, elite_size,
                        avg_depth=avg_depth,
                        avg_used_codons=avg_used_codons,
                        best_ind_used_codons=best_ind_used_codons,
+                       behavioural_diversity=behavioural_diversity,
                        structural_diversity=structural_diversity,
                        fitness_diversity=fitness_diversity,
                        selection_time=selection_time, 
@@ -205,13 +224,14 @@ def ge_eaSimpleWithElitism(population, toolbox, cxpb, mutpb, ngen, elite_size,
         selection_time = end-start
         # Vary the pool of individuals
         offspring = varAnd(offspring, toolbox, cxpb, mutpb,
-                           bnf_grammar, codon_size, max_tree_depth, codon_consumption)
+                           bnf_grammar, codon_size, max_tree_depth, 
+                           codon_consumption, genome_representation,
+                           max_genome_length)
 
         # Evaluate the individuals with an invalid fitness
         for ind in offspring:
             if not ind.fitness.valid:
-                invalid_ind = ind
-                ind.fitness.values = toolbox.evaluate(invalid_ind, points_train)
+                ind.fitness.values = toolbox.evaluate(ind, points_train)
                 
         #Update population for next generation
         population[:] = offspring
@@ -219,23 +239,34 @@ def ge_eaSimpleWithElitism(population, toolbox, cxpb, mutpb, ngen, elite_size,
         for i in range(elite_size):
             population.append(halloffame.items[i])
             
-        invalid = 0
+        valid0 = [ind for ind in population if not ind.invalid]
+        valid = [ind for ind in valid0 if not math.isnan(ind.fitness.values[0])]
+        if len(valid0) != len(valid):
+            warnings.warn("Warning: There are valid individuals with fitness = NaN in the population. We will avoid in the statistics.")
+        invalid = len(population) - len(valid0) #We use the original number of invalids in this case, because we just want to count the completely mapped individuals
+        
         list_structures = []
-        list_fitnesses = []
-        for ind in offspring:
-            if ind.invalid == True:
-                invalid += 1
-            else:
-                list_structures.append(str(ind.structure))
+        if 'fitness_diversity' in report_items:
+            list_fitnesses = []
+        if 'behavioural_diversity' in report_items:
+            behaviours = np.zeros([len(valid), len(valid[0].fitness_each_sample)], dtype=float)
+        
+        for idx, ind in enumerate(valid):
+            list_structures.append(str(ind.structure))
+            if 'fitness_diversity' in report_items:
                 list_fitnesses.append(str(ind.fitness.values[0]))
+            if 'behavioural_diversity' in report_items:
+                behaviours[idx, :] = ind.fitness_each_sample
                 
         unique_structures = np.unique(list_structures, return_counts=False)  
-        unique_fitnesses = np.unique(list_fitnesses, return_counts=False)  
+        if 'fitness_diversity' in report_items:
+            unique_fitnesses = np.unique(list_fitnesses, return_counts=False) 
+        if 'behavioural_diversity' in report_items:
+            unique_behaviours = np.unique(behaviours, axis=0)
         
         structural_diversity = len(unique_structures)/len(population)
-        fitness_diversity = len(unique_fitnesses)/(len(points_train[1])+1) #TODO generalise for other problems, because it only works if the fitness is proportional to the number of testcases correctly predicted
-            
-        valid = [ind for ind in population if not math.isnan(ind.fitness.values[0])]
+        fitness_diversity = len(unique_fitnesses)/(len(points_train[1])+1) if 'fitness_diversity' in report_items else 0 #TODO generalise for other problems, because it only works if the fitness is proportional to the number of testcases correctly predicted
+        behavioural_diversity = len(unique_behaviours)/len(population) if 'behavioural_diversity' in report_items else 0
         
         # Update the hall of fame with the generated individuals
         if halloffame is not None:
@@ -245,7 +276,7 @@ def ge_eaSimpleWithElitism(population, toolbox, cxpb, mutpb, ngen, elite_size,
             best_ind_depth = halloffame.items[0].depth
             best_ind_used_codons = halloffame.items[0].used_codons
             if not verbose:
-                print("gen =", gen, ", Fitness =", halloffame.items[0].fitness.values)
+                print("gen =", gen, ", Best fitness =", halloffame.items[0].fitness.values, ", Length of the best ind =", len(halloffame.items[0].genome))
             if points_test:
                 if gen < ngen:
                     fitness_test = np.NaN
@@ -279,6 +310,7 @@ def ge_eaSimpleWithElitism(population, toolbox, cxpb, mutpb, ngen, elite_size,
                        avg_depth=avg_depth,
                        avg_used_codons=avg_used_codons,
                        best_ind_used_codons=best_ind_used_codons,
+                       behavioural_diversity=behavioural_diversity,
                        structural_diversity=structural_diversity,
                        fitness_diversity=fitness_diversity,
                        selection_time=selection_time, 
@@ -292,6 +324,7 @@ def ge_eaSimpleWithElitism(population, toolbox, cxpb, mutpb, ngen, elite_size,
                        avg_depth=avg_depth,
                        avg_used_codons=avg_used_codons,
                        best_ind_used_codons=best_ind_used_codons,
+                       behavioural_diversity=behavioural_diversity,
                        structural_diversity=structural_diversity,
                        fitness_diversity=fitness_diversity,
                        selection_time=selection_time, 
