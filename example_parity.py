@@ -72,7 +72,7 @@ def mae(y, yhat):
 
     return 1 - np.mean(compare)
 
-def fitness_eval(individual, points, penalty_divisor, penalise_greater_than):
+def fitness_eval(individual, points, penalty_divider, penalise_greater_than):
     x = points[0]
     Y = points[1]
     
@@ -93,7 +93,7 @@ def fitness_eval(individual, points, penalty_divisor, penalise_greater_than):
     individual.fitness_each_sample = np.equal(Y, pred)
     
     if len(individual.genome) > penalise_greater_than:
-        fitness += fitness / penalty_divisor
+        fitness += fitness / penalty_divider
     
     return fitness,
 
