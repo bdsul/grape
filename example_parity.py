@@ -98,27 +98,7 @@ def fitness_eval(individual, points, penalty_divider=None, penalise_greater_than
     
     return fitness,
 
-toolbox = base.Toolbox()
 
-# define a single objective, minimising fitness strategy:
-creator.create("FitnessMin", base.Fitness, weights=(-1.0,))
-
-creator.create('Individual', grape.Individual, fitness=creator.FitnessMin)
-
-toolbox.register("populationCreator", grape.sensible_initialisation, creator.Individual) 
-#toolbox.register("populationCreator", grape.random_initialisation, creator.Individual) 
-#toolbox.register("populationCreator", grape.PI_Grow, creator.Individual) 
-
-toolbox.register("evaluate", fitness_eval, penalty_divider=10000, penalise_greater_than=100)
-
-# Tournament selection:
-toolbox.register("select", tools.selTournament, tournsize=6)
-
-# Single-point crossover:
-toolbox.register("mate", grape.crossover_onepoint)
-
-# Flip-int mutation:
-toolbox.register("mutate", grape.mutation_int_flip_per_codon)
 
 POPULATION_SIZE = 1000
 MAX_GENERATIONS = 50
@@ -143,6 +123,35 @@ CODON_SIZE = 255
 CODON_CONSUMPTION = 'lazy'
 GENOME_REPRESENTATION = 'numpy'
 MAX_GENOME_LENGTH = None
+
+#Set the next two parameters with integer values, if you want to use the penalty approach
+PENALTY_DIVIDER = None
+PENALISE_GREATER_THAN = None
+
+TOURNAMENT_SIZE = 7
+
+toolbox = base.Toolbox()
+
+# define a single objective, minimising fitness strategy:
+creator.create("FitnessMin", base.Fitness, weights=(-1.0,))
+
+creator.create('Individual', grape.Individual, fitness=creator.FitnessMin)
+
+toolbox.register("populationCreator", grape.sensible_initialisation, creator.Individual) 
+#toolbox.register("populationCreator", grape.random_initialisation, creator.Individual) 
+#toolbox.register("populationCreator", grape.PI_Grow, creator.Individual) 
+
+toolbox.register("evaluate", fitness_eval, penalty_divider=PENALTY_DIVIDER, penalise_greater_than=PENALISE_GREATER_THAN) 
+#toolbox.register("evaluate", fitness_eval)
+
+# Tournament selection:
+toolbox.register("select", tools.selTournament, tournsize=TOURNAMENT_SIZE)
+
+# Single-point crossover:
+toolbox.register("mate", grape.crossover_onepoint)
+
+# Flip-int mutation:
+toolbox.register("mutate", grape.mutation_int_flip_per_codon)
 
 REPORT_ITEMS = ['gen', 'invalid', 'avg', 'std', 'min', 'max', 
           'best_ind_length', 'avg_length', 
