@@ -72,7 +72,7 @@ def mae(y, yhat):
 
     return 1 - np.mean(compare)
 
-def fitness_eval(individual, points, penalty_divider, penalise_greater_than):
+def fitness_eval(individual, points, penalty_divider=None, penalise_greater_than=None):
     x = points[0]
     Y = points[1]
     
@@ -92,8 +92,9 @@ def fitness_eval(individual, points, penalty_divider, penalise_greater_than):
     fitness = mae(Y, pred)
     individual.fitness_each_sample = np.equal(Y, pred)
     
-    if len(individual.genome) > penalise_greater_than:
-        fitness += fitness / penalty_divider
+    if penalise_greater_than and penalty_divider:
+        if len(individual.genome) > penalise_greater_than:
+            fitness += fitness / penalty_divider
     
     return fitness,
 
@@ -108,7 +109,7 @@ toolbox.register("populationCreator", grape.sensible_initialisation, creator.Ind
 #toolbox.register("populationCreator", grape.random_initialisation, creator.Individual) 
 #toolbox.register("populationCreator", grape.PI_Grow, creator.Individual) 
 
-toolbox.register("evaluate", fitness_eval, penalty_divisor=10000, penalise_greater_than=100)
+toolbox.register("evaluate", fitness_eval, penalty_divider=10000, penalise_greater_than=100)
 
 # Tournament selection:
 toolbox.register("select", tools.selTournament, tournsize=6)
