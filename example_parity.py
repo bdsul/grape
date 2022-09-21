@@ -107,7 +107,6 @@ P_MUTATION = 0.01
 ELITE_SIZE = round(0.01*POPULATION_SIZE) #it should be smaller or equal to HALLOFFAME_SIZE
 HALLOFFAME_SIZE = round(0.01*POPULATION_SIZE) #it should be at least 1
 
-CODON_CONSUMPTION = 'lazy'
 RANDOM_SEED = 0 #Pay attention that the seed is set up inside the loop of runs, so you are going to have similar runs
 
 MIN_INIT_GENOME_LENGTH = 30 #used only for random initialisation
