@@ -543,26 +543,7 @@ def crossover_onepoint(parent0, parent1, bnf_grammar, max_depth, codon_consumpti
         
         continue_ = new_ind0.depth > max_depth or new_ind1.depth > max_depth
 
-    if max_genome_length:
-        if new_ind0.depth > max_depth or len(new_ind0.genome) > max_genome_length:
-            return0 = parent0
-        else:
-            return0 = new_ind0
-        if new_ind1.depth > max_depth or len(new_ind1.genome) > max_genome_length:
-            return1 = parent1
-        else:
-            return1 = new_ind1
-    else:
-        if new_ind0.depth > max_depth:
-            return0 = parent0
-        else:
-            return0 = new_ind0
-        if new_ind1.depth > max_depth:
-            return1 = parent1
-        else:
-            return1 = new_ind1
-        
-    return return0, return1       
+    return new_ind0, new_ind1       
 
 def mutation_int_flip_per_codon(ind, mut_probability, codon_size, bnf_grammar, max_depth, 
                                 codon_consumption, max_genome_length):
