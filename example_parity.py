@@ -16,7 +16,7 @@ from deap import creator, base, tools
 
 import random
 
-problem = 'parity3'
+problem = 'parity4'
 
 if problem == 'parity3':
     X_train = np.zeros([3,8], dtype=bool)
@@ -42,7 +42,7 @@ elif problem == 'parity4':
     for i in range(16):
         Y_train[i] = data['output'].iloc[i]
         
-    GRAMMAR_FILE = 'parity4.bnf'
+    GRAMMAR_FILE = 'parity4_morePRs.bnf'
 
 elif problem == 'parity5':
     X_train = np.zeros([5,32], dtype=bool)
@@ -120,7 +120,7 @@ MAX_WRAPS = 0
 CODON_SIZE = 255
 
 CODON_CONSUMPTION = 'lazy'
-GENOME_REPRESENTATION = 'numpy'
+GENOME_REPRESENTATION = 'list'
 MAX_GENOME_LENGTH = None
 
 #Set the next two parameters with integer values, if you want to use the penalty approach
