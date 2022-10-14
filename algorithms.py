@@ -158,7 +158,7 @@ def ge_eaSimpleWithElitism(population, toolbox, cxpb, mutpb, ngen, elite_size,
         best_ind_depth = halloffame.items[0].depth
         best_ind_used_codons = halloffame.items[0].used_codons
         if not verbose:
-            print("gen =", 0, ", Fitness =", halloffame.items[0].fitness.values)
+            print("gen =", 0, ", Best fitness =", halloffame.items[0].fitness.values)
     
     length = [len(ind.genome) for ind in valid]
     avg_length = sum(length)/len(length)
@@ -276,7 +276,7 @@ def ge_eaSimpleWithElitism(population, toolbox, cxpb, mutpb, ngen, elite_size,
             best_ind_depth = halloffame.items[0].depth
             best_ind_used_codons = halloffame.items[0].used_codons
             if not verbose:
-                print("gen =", gen, ", Best fitness =", halloffame.items[0].fitness.values, ", Length of the best ind =", len(halloffame.items[0].genome))
+                print("gen =", gen, ", Best fitness =", halloffame.items[0].fitness.values, ", Number of invalids =", invalid)
             if points_test:
                 if gen < ngen:
                     fitness_test = np.NaN
