@@ -586,14 +586,6 @@ def reMap(ind, genome, bnf_grammar, max_tree_depth, codon_consumption):
         ind.phenotype, ind.nodes, ind.depth, \
         ind.used_codons, ind.invalid, ind.n_wraps, \
         ind.structure = mapper_eager(genome, bnf_grammar, max_tree_depth)
-    elif codon_consumption == 'leap':
-        ind.phenotype, ind.nodes, ind.depth, \
-        ind.used_codons, ind.invalid, ind.n_wraps, \
-        ind.structure, ind.tile_size, ind.effective_positions = mapper_leap(genome, bnf_grammar, max_tree_depth)
-    elif codon_consumption == 'leap2' or codon_consumption == 'leap3':
-        ind.phenotype, ind.nodes, ind.depth, \
-        ind.used_codons, ind.invalid, ind.n_wraps, \
-        ind.structure, ind.tile_size, ind.effective_positions = mapper_leap2(genome, bnf_grammar, max_tree_depth)
     else:
         raise ValueError("Unknown mapper")
         
@@ -608,3 +600,14 @@ def replace_nth(string, substring, new_substring, nth):
     if i == nth:
         return string[:find] + new_substring + string[find+len(substring):]
     return string
+
+def selTournamentWithoutInvalids(individuals, k, tournsize, fit_attr="fitness"):
+    """
+    A simple tournament selection, which avoid invalid individuals.
+    """
+    chosen = []
+    valid_individuals = [i for i in individuals if not i.invalid]
+    while len(chosen) < k:
+        aspirants = random.sample(valid_individuals, tournsize)
+        chosen.append(max(aspirants, key=attrgetter(fit_attr)))
+    return chosen
