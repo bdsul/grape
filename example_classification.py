@@ -16,63 +16,154 @@ from deap import creator, base, tools
 import random
 
 from sklearn.model_selection import train_test_split
+import csv
 
 problem = 'heartDisease'
 
-if problem == 'spambase':
-    #There 1813 samples with class 1
-    #We'll split into 70% for training and 30% for test, assuring the balanced data
-    X = np.zeros([4601, 57], dtype=float)
-    Y = np.zeros([4601,], dtype=int)
-
-    data = pd.read_table(r"datasets/spambase.csv")
-    for i in range(4601):
-        for j in range(57):
-            X[i,j] = data['d'+ str(j)].iloc[i]
-    for i in range(4601):
-        Y[i] = data['class'].iloc[i]
+def setDataSet(problem, RANDOM_SEED):
+    np.random.seed(RANDOM_SEED)
+    if problem == 'australian': #66
+        data =  pd.read_csv(r"datasets/australian.dat", sep=" ")    
+        l = data.shape[0]
+        Y = np.zeros([l,], dtype=int)
+        for i in range(l):
+            Y[i] = data['output'].iloc[i]
+        data.pop('output')
+        #continuous features: d1, d2, d6, d9, d12, d13
+        #categorical features:
+        #d0: two
+        #d3: three => change 3 to 0
+        #data['d3'] = data['d3'].replace([3], 0)
+        #d4: 14 => change 14 to 0
+        #data['d4'] = data['d4'].replace([14], 0)
+        #d5: 9 => change 9 to 0
+        #data['d5'] = data['d5'].replace([9], 0)
+        #d7: two
+        #d8: two
+        #d10: two
+        #d11: three => change 3 to 0
+        #data['d11'] = data['d11'].replace([3], 0)     
         
-    X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.3, random_state=42)
-    
-    X_train = np.transpose(X_train)
-    X_test = np.transpose(X_test)
+        #Convert categorical using one-hot enconding
+        dataOneHot = pd.get_dummies(data, columns=['d3', 'd4', 'd5', 'd11'])
         
-    GRAMMAR_FILE = 'spambase.bnf'
-
-if problem == 'heartDisease':
-    #There are 297 samples
-    #We'll split into 70% for training and 30% for test, assuring the balanced data
-    #X = np.zeros([297, 13], dtype=float)
-    #Y = np.zeros([297,], dtype=int)
-    
-    data =  pd.read_csv(r"datasets/processed.cleveland.data", sep=",")
-    #There are some data missing on columns d11 and d12, so let's remove the rows
-    data = data[data.ca != '?']
-    data = data[data.thal != '?']
-    
-    #There are 160 samples with class 0, 54 with class 1, 35 with class 2,
-    #35 with class 3 and 13 with class 4
-    #Let's consider the class 0 and all the remaining as class 1
-    Y = data['class'].to_numpy()
-    for i in range(len(Y)):
-        Y[i] = 1 if Y[i] > 0 else 0
-    data = data.drop(['class'], axis=1)
-    
-    data.loc[:, ['age', 'trestbps', 'chol', 'thalach', 'oldpeak']] = (data.loc[:, ['age', 'trestbps', 'chol', 'thalach', 'oldpeak']] - data.loc[:, ['age', 'trestbps', 'chol', 'thalach', 'oldpeak']].mean())/data.loc[:, ['age', 'trestbps', 'chol', 'thalach', 'oldpeak']].std()
-    
-    
-    data = pd.get_dummies(data, columns=['cp', 'restecg', 'slope', 'ca', 'thal'])#, prefix = ['cp']) = pd.get_dummies(data, columns=['cp', 'restecg', 'slope', 'ca', 'thal'])#, prefix = ['cp'])
-    
-    X = data.to_numpy()
-  
-    X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.3, random_state=42)
-    
-    X_train = np.transpose(X_train)
-    X_test = np.transpose(X_test)
+        X = dataOneHot.to_numpy()
         
-    GRAMMAR_FILE = 'heartDisease.bnf'
+        X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.3, random_state=RANDOM_SEED)
+        
+        X_train = np.transpose(X_train)
+        X_test = np.transpose(X_test)
+        
+        GRAMMAR_FILE = 'australian.bnf'
+    
+    if problem == 'carEvaluation':
+        Y = np.zeros([1727,], dtype=int)
+    
+        column_names = ["buying", "maint", "doors", "persons", "lug_boot", "safety", "class"]
+        
+        data = pd.read_csv(r"datasets/car.data", sep=",", header=0, names=column_names)
+        
+        for i in range(1727):
+            if data['class'].iloc[i] == 'unacc':
+                Y[i] = 0
+            elif data['class'].iloc[i] == 'acc':
+                Y[i] = 1
+            elif data['class'].iloc[i] == 'good':
+                Y[i] = 2
+            elif data['class'].iloc[i] == 'vgood':
+                Y[i] = 3
+            
+        data = data.drop(['class'], axis=1)
+        
+        #Using oneHot encoding on categorical (non binary) features
+        dataOneHot = pd.get_dummies(data)
+        
+        X = dataOneHot.to_numpy()
+            
+        X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.3, random_state=RANDOM_SEED)
+        
+        X_train = np.transpose(X_train)
+        X_test = np.transpose(X_test)
+        
+        GRAMMAR_FILE = 'carEvaluation.bnf'
+    
+    if problem == 'Banknote':
+        #There 1813 samples with class 1
+        #We'll split into 70% for training and 30% for test, assuring the balanced data
+        X_train = np.zeros([1000, 4], dtype=float)
+        Y_train = np.zeros([1000,], dtype=bool)
+        X_test = np.zeros([372, 4], dtype=float)
+        Y_test = np.zeros([372,], dtype=bool)
+    
+        data = pd.read_table(r"datasets/banknote_Train.csv", sep=" ")
+        for i in range(1000):
+            for j in range(4):
+                X_train[i,j] = data['x'+ str(j)].iloc[i]
+        for i in range(1000):
+            Y_train[i] = data['y'].iloc[i] > 0
+            
+        data = pd.read_table(r"datasets/banknote_Test.csv", sep=" ")
+        for i in range(372):
+            for j in range(4):
+                X_test[i,j] = data['x'+ str(j)].iloc[i]
+        for i in range(372):
+            Y_test[i] = data['y'].iloc[i] > 0
+        
+        X_train = np.transpose(X_train)
+        X_test = np.transpose(X_test)
+            
+        GRAMMAR_FILE = 'Banknote.bnf'
+        
+    if problem == 'spambase':
+        #There 1813 samples with class 1
+        #We'll split into 70% for training and 30% for test, assuring the balanced data
+        X = np.zeros([4601, 57], dtype=float)
+        Y = np.zeros([4601,], dtype=int)
+    
+        data = pd.read_table(r"datasets/spambase.csv")
+        for i in range(4601):
+            for j in range(57):
+                X[i,j] = data['d'+ str(j)].iloc[i]
+        for i in range(4601):
+            Y[i] = data['class'].iloc[i]
+            
+        X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.3, random_state=RANDOM_SEED)
+        
+        X_train = np.transpose(X_train)
+        X_test = np.transpose(X_test)
+            
+        GRAMMAR_FILE = 'spambase.bnf'
+    
+    if problem == 'heartDisease':
+        data =  pd.read_csv(r"datasets/processed.cleveland.data", sep=",")
+        #There are some data missing on columns d11 and d12, so let's remove the rows
+        data = data[data.ca != '?']
+        data = data[data.thal != '?']
+        
+        #There are 160 samples with class 0, 54 with class 1, 35 with class 2,
+        #35 with class 3 and 13 with class 4
+        #Let's consider the class 0 and all the remaining as class 1
+        Y = data['class'].to_numpy()
+        for i in range(len(Y)):
+            Y[i] = 1 if Y[i] > 0 else 0
+        data = data.drop(['class'], axis=1)
+        
+        data.loc[:, ['age', 'trestbps', 'chol', 'thalach', 'oldpeak']] = (data.loc[:, ['age', 'trestbps', 'chol', 'thalach', 'oldpeak']] - data.loc[:, ['age', 'trestbps', 'chol', 'thalach', 'oldpeak']].mean())/data.loc[:, ['age', 'trestbps', 'chol', 'thalach', 'oldpeak']].std()
+        
+        data = pd.get_dummies(data, columns=['cp', 'restecg', 'slope', 'ca', 'thal'])#, prefix = ['cp']) = pd.get_dummies(data, columns=['cp', 'restecg', 'slope', 'ca', 'thal'])#, prefix = ['cp'])
+        
+        X = data.to_numpy()
+      
+        X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.3, random_state=RANDOM_SEED)
+        
+        X_train = np.transpose(X_train)
+        X_test = np.transpose(X_test)
+            
+        GRAMMAR_FILE = 'heartDisease.bnf'
+    
+    BNF_GRAMMAR = grape.Grammar(r"grammars/" + GRAMMAR_FILE)
 
-BNF_GRAMMAR = grape.Grammar(r"grammars/" + GRAMMAR_FILE)
+    return X_train, Y_train, X_test, Y_test, BNF_GRAMMAR
 
 def mae(y, yhat):
     """
@@ -126,55 +217,82 @@ toolbox.register("populationCreator", grape.sensible_initialisation, creator.Ind
 toolbox.register("evaluate", fitness_eval)
 
 # Tournament selection:
-toolbox.register("select", tools.selTournament, tournsize=6)
+toolbox.register("select", tools.selTournament, tournsize=7) #selLexicaseFilter
 
 # Single-point crossover:
-toolbox.register("mate", grape.crossover_onepoint)
+toolbox.register("mate", grape.crossover_onepoint)#_leap2)
 
 # Flip-int mutation:
-toolbox.register("mutate", grape.mutation_int_flip_per_codon)
+toolbox.register("mutate", grape.mutation_int_flip_per_codon)#_leap)
 
 POPULATION_SIZE = 1000
-MAX_GENERATIONS = 20
+MAX_INIT_TREE_DEPTH = 13
+MIN_INIT_TREE_DEPTH = 4
+
+MAX_GENERATIONS = 200
 P_CROSSOVER = 0.8
 P_MUTATION = 0.01
-ELITE_SIZE = round(0.01*POPULATION_SIZE)
+ELITE_SIZE = 0#round(0.01*POPULATION_SIZE) #it should be smaller or equal to HALLOFFAME_SIZE
+HALLOFFAME_SIZE = 1#round(0.01*POPULATION_SIZE) #it should be at least 1
 
-INIT_GENOME_LENGTH = 30 #used only for random initialisation
+MIN_INIT_GENOME_LENGTH = 95#*6
+MAX_INIT_GENOME_LENGTH = 115#*6
 random_initilisation = False #put True if you use random initialisation
 
-MAX_INIT_TREE_DEPTH = 10
-MIN_INIT_TREE_DEPTH = 3
-MAX_TREE_DEPTH = 90
+CODON_CONSUMPTION = 'lazy'
+GENOME_REPRESENTATION = 'list'
+MAX_GENOME_LENGTH = None#'auto'
+
+MAX_TREE_DEPTH = 35 #equivalent to 17 in GP with this grammar
 MAX_WRAPS = 0
 CODON_SIZE = 255
 
-N_RUNS = 3
+REPORT_ITEMS = ['gen', 'invalid', 'avg', 'std', 'min', 'max', 
+                'fitness_test',
+                'best_ind_length', 'avg_length', 
+                'best_ind_nodes', 'avg_nodes', 
+                'best_ind_depth', 'avg_depth', 
+                'avg_used_codons', 'best_ind_used_codons', 
+                'structural_diversity', 'fitness_diversity',
+                'selection_time', 'generation_time']
+
+N_RUNS = 1
 
 for i in range(N_RUNS):
     print()
     print()
-    print("Run:", i+1)
+    print("Run:", i)
     print()
+    
+    RANDOM_SEED = i
+    
+    X_train, Y_train, X_test, Y_test, BNF_GRAMMAR = setDataSet(problem, RANDOM_SEED) #We set up this inside the loop for the case in which the data is defined randomly
+
+    random.seed(RANDOM_SEED) 
 
     # create initial population (generation 0):
     if random_initilisation:
         population = toolbox.populationCreator(pop_size=POPULATION_SIZE, 
                                            bnf_grammar=BNF_GRAMMAR, 
-                                           init_genome_length=INIT_GENOME_LENGTH,
+                                           min_init_genome_length=MIN_INIT_GENOME_LENGTH,
+                                           max_init_genome_length=MAX_INIT_GENOME_LENGTH,
                                            max_init_depth=MAX_TREE_DEPTH, 
-                                           codon_size=CODON_SIZE
+                                           codon_size=CODON_SIZE,
+                                           codon_consumption=CODON_CONSUMPTION,
+                                           genome_representation=GENOME_REPRESENTATION
                                            )
     else:
         population = toolbox.populationCreator(pop_size=POPULATION_SIZE, 
                                            bnf_grammar=BNF_GRAMMAR, 
                                            min_init_depth=MIN_INIT_TREE_DEPTH,
                                            max_init_depth=MAX_INIT_TREE_DEPTH,
-                                           codon_size=CODON_SIZE
+                                           codon_size=CODON_SIZE,
+                                           codon_consumption=CODON_CONSUMPTION,
+                                           genome_representation=GENOME_REPRESENTATION
                                             )
     
     # define the hall-of-fame object:
-    hof = tools.HallOfFame(ELITE_SIZE)
+    hof = tools.HallOfFame(HALLOFFAME_SIZE)
     
     # prepare the statistics object:
     stats = tools.Statistics(key=lambda ind: ind.fitness.values)
@@ -186,23 +304,30 @@ for i in range(N_RUNS):
     # perform the Grammatical Evolution flow:
     population, logbook = algorithms.ge_eaSimpleWithElitism(population, toolbox, cxpb=P_CROSSOVER, mutpb=P_MUTATION,
                                               ngen=MAX_GENERATIONS, elite_size=ELITE_SIZE,
-                                              bnf_grammar=BNF_GRAMMAR, codon_size=CODON_SIZE, 
+                                              bnf_grammar=BNF_GRAMMAR, 
+                                              codon_size=CODON_SIZE, 
                                               max_tree_depth=MAX_TREE_DEPTH,
+                                              max_genome_length=MAX_GENOME_LENGTH,
                                               points_train=[X_train, Y_train], 
                                               points_test=[X_test, Y_test], 
+                                              codon_consumption=CODON_CONSUMPTION,
+                                              report_items=REPORT_ITEMS,
+                                              genome_representation=GENOME_REPRESENTATION,                                              
                                               stats=stats, halloffame=hof, verbose=False)
     
     import textwrap
     best = hof.items[0].phenotype
     print("Best individual: \n","\n".join(textwrap.wrap(best,80)))
     print("\nTraining Fitness: ", hof.items[0].fitness.values[0])
-    print("Test Fitness: ", fitness_eval(hof.items[0], [X_test,Y_test])[0])
+    
     print("Depth: ", hof.items[0].depth)
     print("Length of the genome: ", len(hof.items[0].genome))
     print(f'Used portion of the genome: {hof.items[0].used_codons/len(hof.items[0].genome):.2f}')
     
     max_fitness_values, mean_fitness_values = logbook.select("max", "avg")
     min_fitness_values, std_fitness_values = logbook.select("min", "std")
+    fitness_test = logbook.select("fitness_test")
+    
     best_ind_length = logbook.select("best_ind_length")
     avg_length = logbook.select("avg_length")
 
@@ -212,8 +337,6 @@ for i in range(N_RUNS):
     avg_used_codons = logbook.select("avg_used_codons")
     best_ind_used_codons = logbook.select("best_ind_used_codons")
     
-    fitness_test = logbook.select("fitness_test")
-    
     best_ind_nodes = logbook.select("best_ind_nodes")
     avg_nodes = logbook.select("avg_nodes")
 
@@ -221,19 +344,12 @@ for i in range(N_RUNS):
     avg_depth = logbook.select("avg_depth")
 
     structural_diversity = logbook.select("structural_diversity") 
+    fitness_diversity = logbook.select("fitness_diversity")     
     
-    import csv
-    import random
-    r = random.randint(1,1e10)
+    r = RANDOM_SEED    
+    header = REPORT_ITEMS
     
-    header = ['gen', 'invalid', 'avg', 'std', 'min', 'max', 'fitness_test', 
-              'best_ind_length', 'avg_length', 
-              'best_ind_nodes', 'avg_nodes', 
-              'best_ind_depth', 'avg_depth', 
-              'avg_used_codons', 'best_ind_used_codons', 
-              'structural_diversity',
-              'selection_time', 'generation_time']
-    with open("results/" + str(r) + ".csv", "w", encoding='UTF8', newline='') as csvfile:
+    with open(r"./results/" + str(r) + ".csv", "w", encoding='UTF8', newline='') as csvfile:
         writer = csv.writer(csvfile, delimiter='\t')
         writer.writerow(header)
         for value in range(len(max_fitness_values)):
@@ -250,5 +366,6 @@ for i in range(N_RUNS):
                              avg_used_codons[value],
                              best_ind_used_codons[value], 
                              structural_diversity[value],
+                             fitness_diversity[value],
                              selection_time[value], 
                              generation_time[value]])

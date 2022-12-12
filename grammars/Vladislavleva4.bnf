@@ -1,7 +1,7 @@
 <e>  ::=  <e>+<e>|
           <e>-<e>|
           <e>*<e>|
-          div(<e>,<e>)|
+          pdiv(<e>,<e>)|
           psqrt(<e>)|
           np.sin(<e>)|
           np.tanh(<e>)|

@@ -71,48 +71,35 @@ class Grammar(object):
             self.production_rules[i] = [item.strip() for item in self.production_rules[i]]
             for j in range(len(self.production_rules[i])):
                 #Include in the list the PR itself, NT or T, arity and the production choice label
-                if re.findall(r"\<(\w+)\>",self.production_rules[i][j]):
-                    arity = len(re.findall(r"\<(\w+)\>",self.production_rules[i][j]))
+                #if re.findall(r"\<(\w+)\>",self.production_rules[i][j]):
+                if re.findall(r"\<([\(\)\w,-.]+)\>",self.production_rules[i][j]):                    
+                    #arity = len(re.findall(r"\<(\w+)\>",self.production_rules[i][j]))
+                    arity = len(re.findall(r"\<([\(\)\w,-.]+)\>",self.production_rules[i][j]))
                     self.production_rules[i][j] = [self.production_rules[i][j] , "non-terminal", arity, j]
                 else:
                     self.production_rules[i][j] = [self.production_rules[i][j] , "terminal", 0, j] #arity 0
         #number of production rules for each non-terminal
         self.n_rules = [len(list_) for list_ in self.production_rules]
-        
-        #Building list of non-terminals with recursive production-rules
-        check_recursiveness = [self.start_rule]
-        check_size = len(check_recursiveness)
-        continue_ = True
-        while continue_:
-            for i in range(len(self.production_rules)):
-                for j in range(len(self.production_rules[i])):
-                    for k in range(len(check_recursiveness)):
-                        if check_recursiveness[k] in self.production_rules[i][j][0]:
-                            if self.non_terminals[i] not in check_recursiveness:
-                                check_recursiveness.append(self.non_terminals[i])
-            if len(check_recursiveness) != check_size:
-                check_size = len(check_recursiveness)
-            else:
-                continue_ = False
-        
-        #Including information of recursiveness in each production-rule
-        #True if the respective non-terminal has recursive production-rules. False, otherwise
+  
         for i in range(len(self.production_rules)):
             for j in range(len(self.production_rules[i])):
-                if self.production_rules[i][j][1] == 'terminal': #a terminal is never recursive
-                    recursive = False
-                    self.production_rules[i][j].append(recursive)
-                else: #a non-terminal can be recursive
-                    for k in range(len(check_recursiveness)):
-                        #Check if a recursive NT is in the current list of PR
-                        #TODO I just changed from self.non_terminals[k] to check_recursiveness[k]
-                        if check_recursiveness[k] in self.production_rules[i][j][0]:
-                            recursive = True
-                            break #since we already found a recursive NT in this PR, we can stop
-                        else:
-                            recursive = False #if there is no recursive NT in this PR
-                    self.production_rules[i][j].append(recursive)
-        
+                NTs_to_check_recursiveness = re.findall(r"\<([\(\)\w,-.]+)\>", self.production_rules[i][j][0])
+                NTs_to_check_recursiveness = ['<' + item_ + '>' for item_ in NTs_to_check_recursiveness]
+                unique_NTs = np.unique(NTs_to_check_recursiveness, return_counts=False) 
+                recursive = False
+                for NT_to_check in unique_NTs:
+                    stack = [self.non_terminals[i]]  
+                    if NT_to_check in stack:
+                        recursive = True
+                        break
+                    else:
+                        stack.append(NT_to_check)
+                        recursive = check_recursiveness(self, NT_to_check, stack)
+                        if recursive:
+                            break
+                        stack.pop()
+                self.production_rules[i][j].append(recursive)
+      
         #minimum depth from each non-terminal to terminate the mapping of all symbols
         NT_depth_to_terminate = [None]*len(self.non_terminals)
         #minimum depth from each production rule to terminate the mapping of all symbols
@@ -133,7 +120,8 @@ class Grammar(object):
                 else:
                     for k in range(self.production_rules[i][j][2]): #arity
                         part_PR_depth_to_terminate[i][j].append( list() )
-                        term = re.findall(r"\<(\w+)\>",self.production_rules[i][j][0])[k]
+                        #term = re.findall(r"\<(\w+)\>",self.production_rules[i][j][0])[k]
+                        term = re.findall(r"\<([\(\)\w,-.]+)\>",self.production_rules[i][j][0])[k]
                         isolated_non_terminal[i][j].append('<' + term + '>')
         continue_ = True
         while continue_:
@@ -164,6 +152,26 @@ class Grammar(object):
                     depth_ = max(part_PR_depth_to_terminate[i][j])
                     PR_depth_to_terminate.append(depth_)
                     self.production_rules[i][j].append(depth_)
+        
+def check_recursiveness(self, NT, stack):
+    idx_NT = self.non_terminals.index(NT)
+    for j in range(len(self.production_rules[idx_NT])):
+        NTs_to_check_recursiveness = re.findall(r"\<([\(\)\w,-.]+)\>", self.production_rules[idx_NT][j][0])
+        NTs_to_check_recursiveness = ['<' + item_ + '>' for item_ in NTs_to_check_recursiveness]
+        unique_NTs = np.unique(NTs_to_check_recursiveness, return_counts=False) 
+        recursive = False
+  #      while unique_NTs.size and not recursive:
+        for NT_to_check in unique_NTs:
+            if NT_to_check in stack:
+                recursive = True
+                return recursive
+            else:
+                stack.append(NT_to_check) #Include the current NT to check it recursively
+                recursive = check_recursiveness(self, NT_to_check, stack)
+                if recursive:
+                    return recursive
+                stack.pop() #If the inclusion didn't show recursiveness, remove it before continuing
+    return recursive
         
 def mapper(genome, grammar, max_depth):
     

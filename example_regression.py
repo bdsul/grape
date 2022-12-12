@@ -9,6 +9,8 @@ import grape
 import algorithms
 from functions import add, sub, mul, pdiv, plog, exp, psqrt
 
+import random
+
 from os import path
 import pandas as pd
 import numpy as np
@@ -19,76 +21,69 @@ warnings.filterwarnings("ignore")
 
 problem = 'vladislavleva4'
 
-if problem == 'pagie1':
-    X_train = np.zeros([2,676], dtype=float)
-    Y_train = np.zeros([676,], dtype=float)
-
-    data_train = pd.read_table(r"datasets/Pagie1_train.txt")
-    for i in range(2):
-        for j in range(676):
-            X_train[i,j] = data_train['x'+ str(i)].iloc[j]
-    for i in range(676):
-        Y_train[i] = data_train['response'].iloc[i]
-
-    X_test = np.zeros([2,10000], dtype=float)
-    Y_test = np.zeros([10000,], dtype=float)
-
-    data_test = pd.read_table(r"datasets/Pagie1_test.txt")
-    for i in range(2):
-        for j in range(10000):
-            X_test[i,j] = data_test['x'+ str(i)].iloc[j]
-    for i in range(10000):
-        Y_test[i] = data_test['response'].iloc[i]
-
-    GRAMMAR_FILE = 'Pagie1.bnf'
+def setDataSet(problem):
+    if problem == 'pagie1':
+        X_train = np.zeros([2,676], dtype=float)
+        Y_train = np.zeros([676,], dtype=float)
     
-elif problem == 'vladislavleva4':
-    X_train = np.zeros([5,1024], dtype=float)
-    Y_train = np.zeros([1024,], dtype=float)
-      
-    data_train = pd.read_table(r"datasets/Vladislavleva4_train.txt")
-    for i in range(5):
-        for j in range(1024):
-              X_train[i,j] = data_train['x'+ str(i)].iloc[j]
-    for i in range(1024):
-        Y_train[i] = data_train['response'].iloc[i]
-      
-    X_test = np.zeros([5,5000], dtype=float)
-    Y_test = np.zeros([5000,], dtype=float)
-      
-    data_test = pd.read_table(r"datasets/Vladislavleva4_test.txt")
-    for i in range(5):
-        for j in range(5000):
-            X_test[i,j] = data_test['x'+ str(i)].iloc[j]
-    for i in range(5000):
-        Y_test[i] = data_test['response'].iloc[i]
-      
-    GRAMMAR_FILE = 'Vladislavleva4_op2.bnf'
-
-elif problem == 'Dow':
-    X_train = np.zeros([57,747], dtype=float)
-    Y_train = np.zeros([747,], dtype=float)
+        data_train = pd.read_table(r"datasets/Pagie1_train.txt")
+        for i in range(2):
+            for j in range(676):
+                X_train[i,j] = data_train['x'+ str(i)].iloc[j]
+        for i in range(676):
+            Y_train[i] = data_train['response'].iloc[i]
     
-    data_train = pd.read_table(r"datasets/DowNorm_train.txt")
-    for i in range(56):
-        for j in range(747):
-              X_train[i,j] = data_train['x'+ str(i+1)].iloc[j]
-    for i in range(747):
-        Y_train[i] = data_train['y'].iloc[i]
+        X_test = np.zeros([2,10000], dtype=float)
+        Y_test = np.zeros([10000,], dtype=float)
     
-    X_test = np.zeros([57,319], dtype=float)
-    Y_test = np.zeros([319,], dtype=float)
+        data_test = pd.read_table(r"datasets/Pagie1_test.txt")
+        for i in range(2):
+            for j in range(10000):
+                X_test[i,j] = data_test['x'+ str(i)].iloc[j]
+        for i in range(10000):
+            Y_test[i] = data_test['response'].iloc[i]
     
-    data_test = pd.read_table(r"datasets/DowNorm_test.txt")
-    for i in range(56):
-        for j in range(319):
-            X_test[i,j] = data_test['x'+ str(i+1)].iloc[j]
-    for i in range(319):
-        Y_test[i] = data_test['y'].iloc[i]
+        GRAMMAR_FILE = 'Pagie1.bnf'
+        
+    elif problem == 'vladislavleva4':
+        X_train = np.random.uniform(0.05, 6.05, (5, 1024))
+        Y_train = np.zeros([1024,], dtype=float)
+        for i in range(1024):
+            Y_train[i] = 10/(5 + (X_train[0,i] - 3)**2 + (X_train[1,i] - 3)**2 + (X_train[2,i] - 3)**2 + (X_train[3,i] - 3)**2 + (X_train[4,i] - 3)**2)
     
-    GRAMMAR_FILE = 'Dow.bnf'
-  
-BNF_GRAMMAR = grape.Grammar(r"grammars/" + GRAMMAR_FILE)
+        X_test = np.random.uniform(-0.25, 6.35, (5, 5000))
+        Y_test = np.zeros([5000,], dtype=float)
+        for i in range(5000):
+            Y_test[i] = 10/(5 + (X_test[0,i] - 3)**2 + (X_test[1,i] - 3)**2 + (X_test[2,i] - 3)**2 + (X_test[3,i] - 3)**2 + (X_test[4,i] - 3)**2)
+    
+        GRAMMAR_FILE = 'Vladislavleva4.bnf'
+    
+    elif problem == 'Dow':
+        X_train = np.zeros([57,747], dtype=float)
+        Y_train = np.zeros([747,], dtype=float)
+        
+        data_train = pd.read_table(r"datasets/DowNorm_train.txt")
+        for i in range(56):
+            for j in range(747):
+                  X_train[i,j] = data_train['x'+ str(i+1)].iloc[j]
+        for i in range(747):
+            Y_train[i] = data_train['y'].iloc[i]
+        
+        X_test = np.zeros([57,319], dtype=float)
+        Y_test = np.zeros([319,], dtype=float)
+        
+        data_test = pd.read_table(r"datasets/DowNorm_test.txt")
+        for i in range(56):
+            for j in range(319):
+                X_test[i,j] = data_test['x'+ str(i+1)].iloc[j]
+        for i in range(319):
+            Y_test[i] = data_test['y'].iloc[i]
+        
+        GRAMMAR_FILE = 'Dow.bnf'
+        
+    BNF_GRAMMAR = grape.Grammar(r"grammars/" + GRAMMAR_FILE)
+    
+    return X_train, Y_train, X_test, Y_test, BNF_GRAMMAR
 
 def fitness_eval(individual, points):
     #points = [X, Y]
@@ -140,7 +135,7 @@ toolbox.register("populationCreator", grape.sensible_initialisation, creator.Ind
 toolbox.register("evaluate", fitness_eval)
 
 # Tournament selection:
-toolbox.register("select", tools.selTournament, tournsize=6)
+toolbox.register("select", tools.selTournament, tournsize=7)
 
 # Single-point crossover:
 toolbox.register("mate", grape.crossover_onepoint)
@@ -148,47 +143,75 @@ toolbox.register("mate", grape.crossover_onepoint)
 # Flip-int mutation:
 toolbox.register("mutate", grape.mutation_int_flip_per_codon)
     
-POPULATION_SIZE = 1000
-MAX_GENERATIONS = 20
+POPULATION_SIZE = 200
+MAX_GENERATIONS = 200
 P_CROSSOVER = 0.8
 P_MUTATION = 0.01
-ELITE_SIZE = round(0.01*POPULATION_SIZE)
+ELITE_SIZE = 0#round(0.01*POPULATION_SIZE) #it should be smaller or equal to HALLOFFAME_SIZE
+HALLOFFAME_SIZE = 1#round(0.01*POPULATION_SIZE) #it should be at least 1
 
-INIT_GENOME_LENGTH = 30 #used only for random initialisation
+MIN_INIT_GENOME_LENGTH = 30 #used only for random initialisation
+MAX_INIT_GENOME_LENGTH = 50
 random_initilisation = False #put True if you use random initialisation
 
-MAX_INIT_TREE_DEPTH = 10
+MAX_INIT_TREE_DEPTH = 13 #equivalent to 6 in GP with this grammar
 MIN_INIT_TREE_DEPTH = 3
-MAX_TREE_DEPTH = 90
+MAX_TREE_DEPTH = 35 #equivalent to 17 in GP with this grammar
 MAX_WRAPS = 0
 CODON_SIZE = 255
 
-N_RUNS = 3
+CODON_CONSUMPTION = 'lazy'
+GENOME_REPRESENTATION = 'list'
+MAX_GENOME_LENGTH = None
+
+REPORT_ITEMS = ['gen', 'invalid', 'avg', 'std', 'min', 'max', 
+                'fitness_test',
+          'best_ind_length', 'avg_length', 
+          'best_ind_nodes', 'avg_nodes', 
+          'best_ind_depth', 'avg_depth', 
+          'avg_used_codons', 'best_ind_used_codons', 
+        #  'behavioural_diversity',
+          'structural_diversity', #'fitness_diversity',
+          'selection_time', 'generation_time']
+
+N_RUNS = 1
 
 for i in range(N_RUNS):
     print()
     print()
-    print("Run:", i+1)
+    print("Run:", i)
     print()
+    
+    RANDOM_SEED = i
+    
+    np.random.seed(RANDOM_SEED)
+    X_train, Y_train, X_test, Y_test, BNF_GRAMMAR = setDataSet(problem) #We set up this inside the loop for the case in which the data is defined randomly
 
+    random.seed(RANDOM_SEED) 
+    
     # create initial population (generation 0):
     if random_initilisation:
-        population = toolbox.populationCreator(pop_size=POPULATION_SIZE, 
-                                           bnf_grammar=BNF_GRAMMAR, 
-                                           init_genome_length=INIT_GENOME_LENGTH,
-                                           max_init_depth=MAX_TREE_DEPTH, 
-                                           codon_size=CODON_SIZE
+        population = toolbox.populationCreator(pop_size=POPULATION_SIZE,
+                                           bnf_grammar=BNF_GRAMMAR,
+                                           min_init_genome_length=MIN_INIT_GENOME_LENGTH,
+                                           max_init_genome_length=MAX_INIT_GENOME_LENGTH,
+                                           max_init_depth=MAX_TREE_DEPTH,
+                                           codon_size=CODON_SIZE,
+                                           codon_consumption=CODON_CONSUMPTION,
+                                           genome_representation=GENOME_REPRESENTATION
                                            )
     else:
-        population = toolbox.populationCreator(pop_size=POPULATION_SIZE, 
-                                           bnf_grammar=BNF_GRAMMAR, 
+        population = toolbox.populationCreator(pop_size=POPULATION_SIZE,
+                                           bnf_grammar=BNF_GRAMMAR,
                                            min_init_depth=MIN_INIT_TREE_DEPTH,
                                            max_init_depth=MAX_INIT_TREE_DEPTH,
-                                           codon_size=CODON_SIZE
+                                           codon_size=CODON_SIZE,
+                                           codon_consumption=CODON_CONSUMPTION,
+                                           genome_representation=GENOME_REPRESENTATION
                                             )
-    
+
     # define the hall-of-fame object:
-    hof = tools.HallOfFame(ELITE_SIZE)
+    hof = tools.HallOfFame(HALLOFFAME_SIZE)
     
     # prepare the statistics object:
     stats = tools.Statistics(key=lambda ind: ind.fitness.values)
@@ -200,10 +223,15 @@ for i in range(N_RUNS):
     # perform the Grammatical Evolution flow:
     population, logbook = algorithms.ge_eaSimpleWithElitism(population, toolbox, cxpb=P_CROSSOVER, mutpb=P_MUTATION,
                                               ngen=MAX_GENERATIONS, elite_size=ELITE_SIZE,
-                                              bnf_grammar=BNF_GRAMMAR, codon_size=CODON_SIZE, 
+                                              bnf_grammar=BNF_GRAMMAR,
+                                              codon_size=CODON_SIZE,
                                               max_tree_depth=MAX_TREE_DEPTH,
-                                              points_train=[X_train, Y_train], 
-                                              points_test=[X_test, Y_test], 
+                                              max_genome_length=MAX_GENOME_LENGTH,
+                                              points_train=[X_train, Y_train],
+                                              points_test=[X_test, Y_test],
+                                              codon_consumption=CODON_CONSUMPTION,
+                                              report_items=REPORT_ITEMS,
+                                              genome_representation=GENOME_REPRESENTATION,
                                               stats=stats, halloffame=hof, verbose=False)
     
     import textwrap
@@ -237,17 +265,11 @@ for i in range(N_RUNS):
     structural_diversity = logbook.select("structural_diversity") 
     
     import csv
-    import random
-    r = random.randint(1,1e10)
+    r = RANDOM_SEED
     
-    header = ['gen', 'invalid', 'avg', 'std', 'min', 'max', 'fitness_test', 
-              'best_ind_length', 'avg_length', 
-              'best_ind_nodes', 'avg_nodes', 
-              'best_ind_depth', 'avg_depth', 
-              'avg_used_codons', 'best_ind_used_codons', 
-              'structural_diversity',
-              'selection_time', 'generation_time']
-    with open("results/" + str(r) + ".csv", "w", encoding='UTF8', newline='') as csvfile:
+    header = REPORT_ITEMS
+    
+    with open(r"./results/" + str(r) + ".csv", "w", encoding='UTF8', newline='') as csvfile:
         writer = csv.writer(csvfile, delimiter='\t')
         writer.writerow(header)
         for value in range(len(max_fitness_values)):
@@ -263,6 +285,8 @@ for i in range(N_RUNS):
                              avg_depth[value],
                              avg_used_codons[value],
                              best_ind_used_codons[value], 
+                           #  behavioural_diversity[value],
                              structural_diversity[value],
+                          #   fitness_diversity[value],
                              selection_time[value], 
                              generation_time[value]])
