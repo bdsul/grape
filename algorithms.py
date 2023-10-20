@@ -219,7 +219,7 @@ def ge_eaSimpleWithElitism(population, toolbox, cxpb, mutpb, ngen, elite_size,
     
         # Select the next generation individuals
         start = time.time()    
-        offspring = toolbox.select(population, len(population)-elite_size)
+        offspring = toolbox.select(valid, len(population)-elite_size)
         end = time.time()
         selection_time = end-start
         # Vary the pool of individuals
