@@ -220,10 +220,10 @@ toolbox.register("evaluate", fitness_eval)
 toolbox.register("select", tools.selTournament, tournsize=7) #selLexicaseFilter
 
 # Single-point crossover:
-toolbox.register("mate", grape.crossover_onepoint)#_leap2)
+toolbox.register("mate", grape.crossover_onepoint)
 
 # Flip-int mutation:
-toolbox.register("mutate", grape.mutation_int_flip_per_codon)#_leap)
+toolbox.register("mutate", grape.mutation_int_flip_per_codon)
 
 POPULATION_SIZE = 1000
 MAX_INIT_TREE_DEPTH = 13
@@ -264,7 +264,7 @@ for i in range(N_RUNS):
     print("Run:", i)
     print()
     
-    RANDOM_SEED = i
+    RANDOM_SEED = i + 1
     
     X_train, Y_train, X_test, Y_test, BNF_GRAMMAR = setDataSet(problem, RANDOM_SEED) #We set up this inside the loop for the case in which the data is defined randomly
 
