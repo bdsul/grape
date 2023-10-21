@@ -16,7 +16,7 @@ from deap import creator, base, tools
 
 import random
 
-problem = 'parity4'
+problem = 'parity3'
 
 if problem == 'parity3':
     X_train = np.zeros([3,8], dtype=bool)
@@ -100,7 +100,7 @@ def fitness_eval(individual, points, penalty_divider=None, penalise_greater_than
 
 
 
-POPULATION_SIZE = 1000
+POPULATION_SIZE = 500
 MAX_GENERATIONS = 50
 P_CROSSOVER = 0.8
 P_MUTATION = 0.01

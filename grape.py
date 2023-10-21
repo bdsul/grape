@@ -10,6 +10,7 @@ import math
 from operator import attrgetter
 import numpy as np
 import random
+import copy
 
 class Individual(object):
     """
@@ -509,7 +510,7 @@ def sensible_initialisation(ind_class, pop_size, bnf_grammar, min_init_depth,
             raise ValueError("Unkonwn genome representation")    
             
 def crossover_onepoint(parent0, parent1, bnf_grammar, max_depth, codon_consumption, 
-                       genome_representation, max_genome_length):
+                       genome_representation='list', max_genome_length=None):
     """
     
     """
@@ -522,33 +523,26 @@ def crossover_onepoint(parent0, parent1, bnf_grammar, max_depth, codon_consumpti
     else:
         possible_crossover_codons1 = min(len(parent1.genome), parent1.used_codons)
 
-    #Set points for crossover within the effective part of the genomes
-    point0 = random.randint(1, possible_crossover_codons0)
-    point1 = random.randint(1, possible_crossover_codons1)
+    parent0_genome = parent0.genome.copy()
+    parent1_genome = parent1.genome.copy()
+    continue_ = True    
+    
+    while continue_:
+        #Set points for crossover within the effective part of the genomes
+        point0 = random.randint(1, possible_crossover_codons0)
+        point1 = random.randint(1, possible_crossover_codons1)
       
-    if genome_representation == 'numpy':
-        #TODO This operations is not working in case of wrapping
-        len0 = point0 + (len(parent1.genome) - point1)
-        len1 = point1 + (len(parent0.genome) - point0)
-        new_genome0 = np.zeros([len0], dtype=int)
-        new_genome1 = np.zeros([len1], dtype=int)
-
-        #Operate crossover
-        new_genome0[0:point0] = parent0.genome[0:point0]
-        new_genome0[point0:] = parent1.genome[point1:]
-        new_genome1[0:point1] = parent1.genome[0:point1]
-        new_genome1[point1:] = parent0.genome[point0:]
+        if genome_representation == 'list':
+            #Operate crossover
+            new_genome0 = parent0_genome[0:point0] + parent1_genome[point1:]
+            new_genome1 = parent1_genome[0:point1] + parent0_genome[point0:]
+        else:
+            raise ValueError("Only 'list' representation is implemented")
         
-    elif genome_representation == 'list':
-        #Operate crossover
-        new_genome0 = parent0.genome[0:point0] + parent1.genome[point1:]
-        new_genome1 = parent1.genome[0:point1] + parent0.genome[point0:]
-        
-    else:
-        raise ValueError("Unknown genome representation")
-      
-    new_ind0 = reMap(parent0, new_genome0, bnf_grammar, max_depth, codon_consumption)
-    new_ind1 = reMap(parent1, new_genome1, bnf_grammar, max_depth, codon_consumption)
+        new_ind0 = reMap(parent0, new_genome0, bnf_grammar, max_depth, codon_consumption)
+        new_ind1 = reMap(parent1, new_genome1, bnf_grammar, max_depth, codon_consumption)
+  
+        continue_ = new_ind0.depth > max_depth or new_ind1.depth > max_depth
     
     if max_genome_length:
         if len(new_ind0.genome) > max_genome_length:
@@ -556,10 +550,11 @@ def crossover_onepoint(parent0, parent1, bnf_grammar, max_depth, codon_consumpti
         if len(new_ind1.genome) > max_genome_length:
             new_ind1.invalid = True
         
+    del new_ind0.fitness.values, new_ind1.fitness.values
     return new_ind0, new_ind1   
 
 def mutation_int_flip_per_codon(ind, mut_probability, codon_size, bnf_grammar, max_depth, 
-                                codon_consumption, max_genome_length):
+                                codon_consumption, max_genome_length=None):
     """
 
     """
@@ -569,16 +564,26 @@ def mutation_int_flip_per_codon(ind, mut_probability, codon_size, bnf_grammar, m
     else:
         possible_mutation_codons = min(len(ind.genome), ind.used_codons) #in case of wrapping, used_codons can be greater than genome's length
 
-    for i in range(possible_mutation_codons):
-        if random.random() < mut_probability:
-            ind.genome[i] = random.randint(0, codon_size)
+    continue_ = True
+    #genome = ind.genome.copy()
+    genome = copy.deepcopy(ind.genome)
+    mutated_ = False
     
-    new_ind = reMap(ind, ind.genome, bnf_grammar, max_depth, codon_consumption)
+    while continue_:
+        for i in range(possible_mutation_codons):
+            if random.random() < mut_probability:
+                genome[i] = random.randint(0, codon_size)
+                mutated_ = True
+    
+        new_ind = reMap(ind, genome, bnf_grammar, max_depth, codon_consumption)
+        continue_ = new_ind.depth > max_depth
         
     if max_genome_length:
         if len(new_ind.genome) > max_genome_length:
             new_ind.invalid = True
 
+    if mutated_:
+        del new_ind.fitness.values
     return new_ind,
 
 def reMap(ind, genome, bnf_grammar, max_tree_depth, codon_consumption):

@@ -50,14 +50,12 @@ def varAnd(population, toolbox, cxpb, mutpb,
                                                           codon_consumption,
                                                           genome_representation,
                                                           max_genome_length)
-            del offspring[i - 1].fitness.values, offspring[i].fitness.values
 
     for i in range(len(offspring)):
         offspring[i], = toolbox.mutate(offspring[i], mutpb,
                                        codon_size, bnf_grammar, 
                                        max_tree_depth, codon_consumption,
                                        max_genome_length)
-        del offspring[i].fitness.values
 
     return offspring
 
