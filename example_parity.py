@@ -100,14 +100,14 @@ def fitness_eval(individual, points, penalty_divider=None, penalise_greater_than
 
 
 
-POPULATION_SIZE = 500
+POPULATION_SIZE = 1000
 MAX_GENERATIONS = 50
 P_CROSSOVER = 0.8
 P_MUTATION = 0.01
-ELITE_SIZE = round(0.01*POPULATION_SIZE) #it should be smaller or equal to HALLOFFAME_SIZE
-HALLOFFAME_SIZE = round(0.01*POPULATION_SIZE) #it should be at least 1
+ELITE_SIZE = 1#round(0.01*POPULATION_SIZE) #it should be smaller or equal to HALLOFFAME_SIZE
+HALLOFFAME_SIZE = 1#round(0.01*POPULATION_SIZE) #it should be at least 1
 
-RANDOM_SEED = 0 #Pay attention that the seed is set up inside the loop of runs, so you are going to have similar runs
+RANDOM_SEED = 42 #Pay attention that the seed is set up inside the loop of runs, so you are going to have similar runs
 
 MIN_INIT_GENOME_LENGTH = 30 #used only for random initialisation
 MAX_INIT_GENOME_LENGTH = 50

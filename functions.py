@@ -9,11 +9,19 @@ Created on Wed Jul  7 10:31:49 2021
 import numpy as np
 import math
 
-def WA(a, b, x):
-    return x*a+(1-x)*b
-
-def OWA(a, b, x):
-    return x*np.maximum(a, b)+(1-x)*np.minimum(a, b)
+def sigmoid(arr):
+    """
+    Calculate the sigmoid of a given input x, which could be an array.
+    
+    Arguments:
+    x -- A numeric value.
+    
+    Returns:
+    s -- The sigmoid of x.
+    """
+    if np.isscalar(arr):
+        arr = np.array([arr])
+    return 1 / (1 + np.exp(-arr))
 
 def minimum(a, b):
     return np.minimum(a, b)
@@ -21,43 +29,14 @@ def minimum(a, b):
 def maximum(a, b):
     return np.maximum(a, b)
     
-def dilator(b):
-    return b**0.5
-
-def concentrator(b):
-    return b**2
-
-def div(a, b):
-    result = np.where(a == 0, np.ones_like(a), a / b)
-    if result == float("inf"):
-        raise ZeroDivisionError
-    else:
-        return result
-    
-def exp(a):
-    result = np.exp(a)
-    if result == float("inf"):
-        raise OverflowError
-    else:
-        return result
-
-def neg(a):
-    return -a
-
 def pdiv(a, b):
     try:
         with np.errstate(divide='ignore', invalid='ignore'):
-            return np.where(a == 0, np.ones_like(a), a / b)
+            return np.where(b == 0, np.ones_like(a), a / b)
     except ZeroDivisionError:
         # In this case we are trying to divide two constants, one of which is 0
         # Return a constant.
         return 1.0
-    
-def protected_div(left, right):
-    try:
-        return left / right
-    except ZeroDivisionError:
-        return 1
     
 def psin(n):
     return np.sin(n)
