@@ -16,7 +16,7 @@ from deap import creator, base, tools
 
 import random
 
-problem = 'parity3'
+problem = 'parity4'
 
 if problem == 'parity3':
     X_train = np.zeros([3,8], dtype=bool)
@@ -42,7 +42,7 @@ elif problem == 'parity4':
     for i in range(16):
         Y_train[i] = data['output'].iloc[i]
         
-    GRAMMAR_FILE = 'parity4_morePRs.bnf'
+    GRAMMAR_FILE = 'parity4.bnf'
 
 elif problem == 'parity5':
     X_train = np.zeros([5,32], dtype=bool)
@@ -113,7 +113,7 @@ MIN_INIT_GENOME_LENGTH = 30 #used only for random initialisation
 MAX_INIT_GENOME_LENGTH = 50
 random_initilisation = False #put True if you use random initialisation
 
-MAX_INIT_TREE_DEPTH = 13 #equivalent to 6 in GP with this grammar
+MAX_INIT_TREE_DEPTH = 8 #equivalent to 6 in GP with this grammar
 MIN_INIT_TREE_DEPTH = 3
 MAX_TREE_DEPTH = 35 #equivalent to 17 in GP with this grammar
 MAX_WRAPS = 0
