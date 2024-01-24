@@ -173,6 +173,54 @@ def check_recursiveness(self, NT, stack):
                     return recursive
                 stack.pop() #If the inclusion didn't show recursiveness, remove it before continuing
     return recursive
+
+def selLexicaseFilterCount(individuals, k):
+    """
+   
+
+    """
+    selected_individuals = []
+    #valid_individuals = individuals#.copy()#[i for i in individuals if not i.invalid]
+    l_samples = np.shape(individuals[0].fitness_each_sample)[0]
+    
+    inds_fitness_zero = [ind for ind in individuals if ind.fitness.values[0] == 0]
+    if len(inds_fitness_zero) > 0:
+        for i in range(k):
+            selected_individuals.append(random.choice(inds_fitness_zero))
+        return selected_individuals
+    
+    cases = list(range(0,l_samples))
+    candidates = individuals
+    
+    error_vectors = [ind.fitness_each_sample for ind in candidates]
+
+    unique_error_vectors = list(set([tuple(i) for i in error_vectors]))
+    unique_error_vectors = [list(i) for i in unique_error_vectors]
+    
+    candidates_prefiltered_set = []
+    for i in range(len(unique_error_vectors)):
+        cands = [ind for ind in candidates if ind.fitness_each_sample == unique_error_vectors[i]]
+        candidates_prefiltered_set.append(cands) #list of lists, each one with the inds with the same error vectors
+
+    for i in range(k):
+        #fill the pool only with candidates with unique error vectors
+        pool = []
+        for list_ in candidates_prefiltered_set:
+            pool.append(random.choice(list_)) 
+        random.shuffle(cases)
+        count_ = 0
+        while len(cases) > 0 and len(pool) > 1:
+            count_ += 1
+            f = max
+            best_val_for_case = f(map(lambda x: x.fitness_each_sample[cases[0]], pool))
+            pool = [ind for ind in pool if ind.fitness_each_sample[cases[0]] == best_val_for_case]
+            del cases[0]                    
+
+        pool[0].n_cases = count_
+        selected_individuals.append(pool[0]) #Select the remaining candidate
+        cases = list(range(0,l_samples)) #Recreate the list of cases
+
+    return selected_individuals
         
 def mapper(genome, grammar, max_depth):
     

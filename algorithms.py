@@ -61,7 +61,7 @@ def varAnd(population, toolbox, cxpb, mutpb,
 
 class hofWarning(UserWarning):
     pass
-
+    
 def ge_eaSimpleWithElitism(population, toolbox, cxpb, mutpb, ngen, elite_size, 
                 bnf_grammar, codon_size, max_tree_depth, 
                 max_genome_length=None,
