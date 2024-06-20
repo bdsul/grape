@@ -885,9 +885,9 @@ def normalise_probs(input_array):
     probs_array = np.where(row_sums > 0, input_array / row_sums, 1 / c)
     return probs_array
 
-MAX_DEPTH = 17    
+MAX_DEPTH = 10    
 POPULATION_SIZE = 500
-GENERATIONS = 5#0
+GENERATIONS = 50
 TOURNSIZE = 7
 MIN_INIT_DEPTH = 2#3
 MIN_MUT_DEPTH = 0
@@ -1039,7 +1039,7 @@ for i in range(N_RUNS):
     X_train, Y_train, X_test, Y_test, fuzzy_columns = setDataSet(problem, RANDOM_SEED, FUZZY_SETS) #We set up this inside the loop for the case in which the data is defined randomly
     
     n_features = X_train.shape[1]
-    print(n_features)
+    print("Number of fuzzy features: ", n_features)
     toolbox = create_toolbox(problem, scenario, n_features, RANDOM_SEED)
         
     random.seed(RANDOM_SEED) 
