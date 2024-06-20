@@ -1,5 +1,5 @@
 import algorithms_gp as algorithms
-from functions import WA, OWA, minimum, maximum, dilator, concentrator, complement
+from functions import WA, OWA, minimum, maximum, dilator, concentrator, complement, replace_substrings
 
 #from os import path
 import pandas as pd
@@ -25,17 +25,17 @@ from selection import selEpsilonLexicaseCount, selEpsilonLexi2_nodesCountTies, s
 import warnings
 warnings.filterwarnings("ignore")
 
-scenario = int(sys.argv[1])
-problem = sys.argv[2]
-run = int(sys.argv[3])
+scenario = 0#int(sys.argv[1])
+problem = 'horse'#sys.argv[2]
+run = 1#int(sys.argv[3])
 
-N_RUNS = int(sys.argv[4])
+N_RUNS = 1#int(sys.argv[4])
 
 def setDataSet(problem, RANDOM_SEED, FUZZY_SETS):
     fuzzy_sets = FUZZY_SETS
 
     if problem == 'heartDisease':
-        data =  pd.read_csv(r"datasets/processed.cleveland.data", sep=",")
+        data =  pd.read_csv(r"../../datasets/processed.cleveland.data", sep=",")
         #There are some data missing on columns d11 and d12 represented by ?, so let's remove the ?
         data = data[data.ca != '?']
         data = data[data.thal != '?']
@@ -65,7 +65,7 @@ def setDataSet(problem, RANDOM_SEED, FUZZY_SETS):
         X_test = fuzzy_test.to_numpy()#.transpose()
         
     if problem == 'australian': #66
-        data =  pd.read_csv(r"datasets/australian.dat", sep=" ")    
+        data =  pd.read_csv(r"../../datasets/australian.dat", sep=" ")    
         data = data[data.d3 != 3] #there are only 2 samples with d3=3, so let's remove them
         
         Ypd = data['output'] 
@@ -89,8 +89,8 @@ def setDataSet(problem, RANDOM_SEED, FUZZY_SETS):
         X_test = fuzzy_test.to_numpy()#.transpose()
         
     if problem == 'segment': #66
-        data_training =  pd.read_csv(r"datasets/segmentation.data", sep=",")
-        data_test =  pd.read_csv(r"datasets/segmentation.test", sep=",")
+        data_training =  pd.read_csv(r"../../datasets/segmentation.data", sep=",")
+        data_test =  pd.read_csv(r"../../datasets/segmentation.test", sep=",")
         labels_training = data_training[['class']]
         labels_test = data_test[['class']]
         data_training.pop('class')
@@ -113,8 +113,8 @@ def setDataSet(problem, RANDOM_SEED, FUZZY_SETS):
         X_test = fuzzy_test.to_numpy()#.transpose()
         
     if problem == 'satellite': #66
-        data_train =  pd.read_csv(r"datasets/satellite_train.csv", sep=" ")
-        data_test =  pd.read_csv(r"datasets/satellite_test.csv", sep=" ")
+        data_train =  pd.read_csv(r"../../datasets/satellite_train.csv", sep=" ")
+        data_test =  pd.read_csv(r"../../datasets/satellite_test.csv", sep=" ")
         labels_train =  data_train[['class']]
         labels_test =  data_test[['class']]
         data_train.pop('class')
@@ -134,57 +134,9 @@ def setDataSet(problem, RANDOM_SEED, FUZZY_SETS):
         X_train = fuzzy_train.to_numpy()#.transpose()
         X_test = fuzzy_test.to_numpy()#.transpose()
         
-    if problem == 'cover': 
-    
-        data =  pd.read_csv(r"datasets/cover.data", sep=",")
-        labels =  data[['class']]
-        data.pop('class')
-        
-        outputsOneHot = pd.get_dummies(labels, columns=['class'])
-        Y = outputsOneHot.to_numpy()
-        
-        X = data.to_numpy()
-        X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.98, random_state=RANDOM_SEED)
-        
-        columns = data.columns
-        df_train = pd.DataFrame(X_train, columns=columns)
-        df_test = pd.DataFrame(X_test, columns=columns)
-
-        domain = matrixDomain(df_train, list(columns)[0:10], list(columns)[10:54])
-        domain[28,0] = 2
-        domain[28,1] = 2
-        
-        fuzzy_train = fuzzifyDataFrame(df_train, fuzzy_sets, domain)
-        fuzzy_test = fuzzifyDataFrame(df_test, fuzzy_sets, domain)
-        X_train = fuzzy_train.to_numpy()#.transpose()
-        X_test = fuzzy_test.to_numpy()#.transpose()
-        
-    if problem == 'vowel': 
-    
-        data =  pd.read_csv(r"datasets/vowel.csv", sep=",")
-        labels =  data[['class']]
-        data.pop('class')
-        
-        outputsOneHot = pd.get_dummies(labels, columns=['class'])
-        Y = outputsOneHot.to_numpy()
-        
-        X = data.to_numpy()
-        X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.25, random_state=RANDOM_SEED)
-        
-        columns = data.columns
-        df_train = pd.DataFrame(X_train, columns=columns)
-        df_test = pd.DataFrame(X_test, columns=columns)
-
-        domain = matrixDomain(df_train, list(columns))
-        
-        fuzzy_train = fuzzifyDataFrame(df_train, fuzzy_sets, domain)
-        fuzzy_test = fuzzifyDataFrame(df_test, fuzzy_sets, domain)
-        X_train = fuzzy_train.to_numpy()#.transpose()
-        X_test = fuzzy_test.to_numpy()#.transpose()
-        
     if problem == 'pima':
-        data =  pd.read_csv(r"datasets/pima.csv", sep=",")
-        labels =  pd.read_csv(r"datasets/pima_labels.csv")
+        data =  pd.read_csv(r"../../datasets/pima.csv", sep=",")
+        labels =  pd.read_csv(r"../../datasets/pima_labels.csv")
                     
         outputsOneHot = pd.get_dummies(labels, columns=['y'])
         
@@ -205,8 +157,8 @@ def setDataSet(problem, RANDOM_SEED, FUZZY_SETS):
         X_test = fuzzy_test.to_numpy()#.transpose()
             
     if problem == 'haberman': #66
-        data =  pd.read_csv(r"datasets/haberman.csv", sep=",")
-        labels =  pd.read_csv(r"datasets/haberman_labels.csv")
+        data =  pd.read_csv(r"../../datasets/haberman.csv", sep=",")
+        labels =  pd.read_csv(r"../../datasets/haberman_labels.csv")
         
         outputsOneHot = pd.get_dummies(labels, columns=['class'])
         Y = outputsOneHot.to_numpy()
@@ -226,8 +178,8 @@ def setDataSet(problem, RANDOM_SEED, FUZZY_SETS):
         X_test = fuzzy_test.to_numpy()#.transpose()
     
     if problem == 'transfusion': #66
-        data =  pd.read_csv(r"datasets/transfusion.csv", sep=",")
-        labels =  pd.read_csv(r"datasets/transfusion_labels.csv")
+        data =  pd.read_csv(r"../../datasets/transfusion.csv", sep=",")
+        labels =  pd.read_csv(r"../../datasets/transfusion_labels.csv")
         
         outputsOneHot = pd.get_dummies(labels, columns=['class'])
         Y = outputsOneHot.to_numpy()
@@ -247,8 +199,8 @@ def setDataSet(problem, RANDOM_SEED, FUZZY_SETS):
         X_test = fuzzy_test.to_numpy()#.transpose()
         
     if problem == 'lupus': #66
-        data =  pd.read_csv(r"datasets/lupus.csv", sep=",")
-        labels =  pd.read_csv(r"datasets/lupus_labels.csv")
+        data =  pd.read_csv(r"../../datasets/lupus.csv", sep=",")
+        labels =  pd.read_csv(r"../../datasets/lupus_labels.csv")
         
         outputsOneHot = pd.get_dummies(labels, columns=['class'])
         Y = outputsOneHot.to_numpy()
@@ -268,7 +220,7 @@ def setDataSet(problem, RANDOM_SEED, FUZZY_SETS):
         X_test = fuzzy_test.to_numpy()#.transpose()
         
     if problem == 'germanCredit': #66
-        data =  pd.read_csv(r"datasets/german.data", sep=",")    
+        data =  pd.read_csv(r"../../datasets/german.data", sep=",")    
         
         Ypd = data['class'] 
         data = data.drop(['class'], axis=1)
@@ -291,7 +243,7 @@ def setDataSet(problem, RANDOM_SEED, FUZZY_SETS):
         X_test = fuzzy_test.to_numpy()#.transpose()
     
     if problem == 'wine': #66
-        data =  pd.read_csv(r"datasets/wine.data", sep=",")    
+        data =  pd.read_csv(r"../../datasets/wine.data", sep=",")    
         
         Ypd = data['class'] 
         data = data.drop(['class'], axis=1)
@@ -314,7 +266,7 @@ def setDataSet(problem, RANDOM_SEED, FUZZY_SETS):
         X_test = fuzzy_test.to_numpy()#.transpose()
     
     if problem == 'iris': #66
-        data =  pd.read_csv(r"datasets/iris.data", sep=",")    
+        data =  pd.read_csv(r"../../datasets/iris.data", sep=",")    
         
         Ypd = data['class'] 
         data = data.drop(['class'], axis=1)
@@ -336,31 +288,9 @@ def setDataSet(problem, RANDOM_SEED, FUZZY_SETS):
         X_train = fuzzy_train.to_numpy()#.transpose()
         X_test = fuzzy_test.to_numpy()#.transpose()
         
-    if problem == 'shuttle': #66
-        data_train =  pd.read_csv(r"datasets/shuttle.trn", sep=" ")
-        data_test =  pd.read_csv(r"datasets/shuttle.tst", sep=" ")
-        labels_train =  data_train[['class']]
-        labels_test =  data_test[['class']]
-        data_train.pop('class')
-        data_test.pop('class')
-        
-        outputsOneHotTrain = pd.get_dummies(labels_train, columns=['class'])
-        outputsOneHotTest = pd.get_dummies(labels_test, columns=['class'])
-        Y_train = outputsOneHotTrain.to_numpy()
-        Y_test = outputsOneHotTest.to_numpy()
-        
-        columns = data_train.columns
-        
-        domain = matrixDomain(data_train, list(columns))
-        
-        fuzzy_train = fuzzifyDataFrame(data_train, fuzzy_sets, domain)
-        fuzzy_test = fuzzifyDataFrame(data_test, fuzzy_sets, domain)
-        X_train = fuzzy_train.to_numpy()#.transpose()
-        X_test = fuzzy_test.to_numpy()#.transpose()
-        
     if problem == 'adult': #66
-        data_training =  pd.read_csv(r"datasets/adult.data", sep=",")
-        data_test =  pd.read_csv(r"datasets/adult.test", sep=",")
+        data_training =  pd.read_csv(r"../../datasets/adult.data", sep=",")
+        data_test =  pd.read_csv(r"../../datasets/adult.test", sep=",")
         data_training['class'] = data_training['class'].replace({'>50K': 1, '<=50K': 0})
         data_test['class'] = data_test['class'].replace({'>50K': 1, '<=50K': 0})
         labels_training = data_training[['class']]
@@ -426,8 +356,8 @@ def setDataSet(problem, RANDOM_SEED, FUZZY_SETS):
         X_test = fuzzy_test.to_numpy()#.transpose()
         
     if problem == 'lawsuit':
-        data = scipy.io.loadmat(r"datasets/data_lawsuit.mat")
-        labels = scipy.io.loadmat(r"datasets/labels_lawsuit.mat")
+        data = scipy.io.loadmat(r"../../datasets/data_lawsuit.mat")
+        labels = scipy.io.loadmat(r"../../datasets/labels_lawsuit.mat")
         
         data = data['data_lawsuit']
         labels = labels['labs_lawsuit']
@@ -451,7 +381,7 @@ def setDataSet(problem, RANDOM_SEED, FUZZY_SETS):
         X_test = fuzzy_test.to_numpy()#.transpose()
 
     if problem == 'bankMarketing': #66
-        data =  pd.read_csv(r"datasets/bank-additional-full.csv", sep=",")    
+        data =  pd.read_csv(r"../../datasets/bank-additional-full.csv", sep=",")    
         
         Ypd = data['class'] 
         data = data.drop(['class'], axis=1)
@@ -486,7 +416,7 @@ def setDataSet(problem, RANDOM_SEED, FUZZY_SETS):
         X_test = fuzzy_test.to_numpy()#.transpose()
 
     if problem == 'recidivism': #66
-        data =  pd.read_csv(r"datasets/compas-scores-two-years.csv", sep=",")
+        data =  pd.read_csv(r"../../datasets/compas-scores-two-years.csv", sep=",")
         #raw_data, age, c_charge_degree, race, age_cat, score_text, sex, priors_count, 
         #            days_b_screening_arrest, decile_score, is_recid, two_year_recid, c_jail_in, c_jail_out
         data.pop('id')
@@ -581,7 +511,7 @@ def setDataSet(problem, RANDOM_SEED, FUZZY_SETS):
         X_test = fuzzy_test.to_numpy()#.transpose()
         
     if problem == 'violentRecidivism': #66
-        data =  pd.read_csv(r"datasets/compas-scores-two-years-violent.csv", sep=",")
+        data =  pd.read_csv(r"../../datasets/compas-scores-two-years-violent.csv", sep=",")
         #raw_data, age, c_charge_degree, race, age_cat, score_text, sex, priors_count, 
         #            days_b_screening_arrest, decile_score, is_recid, two_year_recid, c_jail_in, c_jail_out
         data.pop('id')
@@ -677,8 +607,8 @@ def setDataSet(problem, RANDOM_SEED, FUZZY_SETS):
         X_test = fuzzy_test.to_numpy()#.transpose()
         
     if problem == 'spect': #66
-        data_training =  pd.read_csv(r"datasets/SPECT.train", sep=",")
-        data_test =  pd.read_csv(r"datasets/SPECT.test", sep=",")
+        data_training =  pd.read_csv(r"../../datasets/SPECT.train", sep=",")
+        data_test =  pd.read_csv(r"../../datasets/SPECT.test", sep=",")
         labels_training = data_training[['class']]
         labels_test = data_test[['class']]
         data_training.pop('class')
@@ -700,7 +630,7 @@ def setDataSet(problem, RANDOM_SEED, FUZZY_SETS):
         X_test = fuzzy_test.to_numpy()#.transpose()
         
     if problem == 'vehicle': #66
-        data =  pd.read_csv(r"datasets/vehicle.csv", sep=",")
+        data =  pd.read_csv(r"../../datasets/vehicle.csv", sep=",")
         labels = data[['class']]
         data.pop('class')
         
@@ -739,7 +669,7 @@ def setDataSet(problem, RANDOM_SEED, FUZZY_SETS):
         X_test = fuzzy_test.to_numpy()#.transpose()
         
     if problem == 'credit': #66
-        data =  pd.read_csv(r"datasets/crx.data", sep=",")
+        data =  pd.read_csv(r"../../datasets/crx.data", sep=",")
         labels = data[['class']]
         data.pop('class')
         
@@ -799,8 +729,8 @@ def setDataSet(problem, RANDOM_SEED, FUZZY_SETS):
         X_test = fuzzy_test.to_numpy()#.transpose()
         
     if problem == 'horse': #66
-        data_training =  pd.read_csv(r"datasets/horse-colic.data", sep=",")
-        data_test =  pd.read_csv(r"datasets/horse-colic.test", sep=",")
+        data_training =  pd.read_csv(r"../../datasets/horse-colic.data", sep=",")
+        data_test =  pd.read_csv(r"../../datasets/horse-colic.test", sep=",")
         data_training = data_training[data_training['outcome'] != '?'] #we eliminate rows where the class is not identified
         data_test = data_test[data_test['outcome'] != '?']
         data_training = data_training.reset_index(drop=True)
@@ -871,7 +801,9 @@ def setDataSet(problem, RANDOM_SEED, FUZZY_SETS):
         X_train = fuzzy_train.to_numpy()#.transpose()
         X_test = fuzzy_test.to_numpy()#.transpose()
         
-    return X_train, Y_train, X_test, Y_test
+    fuzzy_columns = fuzzy_train.columns
+        
+    return X_train, Y_train, X_test, Y_test, fuzzy_columns
 
 def fitness_eval0(string_features, individual, points):
     """Fitness function used for plain tournament"""
@@ -901,149 +833,6 @@ def fitness_eval0(string_features, individual, points):
     nodes, _, _ = gp.graph(expr) #nodes, edges, labels
     individual.nodes = len(nodes)
 
-    return fitness,
-
-def fitness_eval6(string_features, penalty, individual, points):
-    """Fitness function used for plain tournament with penalised score (number 
-    of nodes divided by the penalty factor).
-    It considers we are minimising the fitness.
-    """
-    #points = [X, Y]
-    X = points[0]
-    y = points[1]
-    
-    exec(string_features)
-    
-    try:
-        pred = np.array(eval(str(individual))).transpose()
-    except (FloatingPointError, ZeroDivisionError, OverflowError,
-            MemoryError):
-        return np.NaN,
-    assert np.isrealobj(pred)
-    
-    raw_fitness = math.sqrt(np.mean(np.square(np.subtract(y, pred))))
-    
-    labels = np.argmax(y, axis=1)
-    labels_pred = np.argmax(pred, axis=1)
-    individual.mce = 1 - np.mean(np.equal(labels, labels_pred)) 
-    
-    individual.behaviour = list(labels_pred) #list of predicted outputs
-    
-    #Calculate the number of nodes
-    expr = toolbox.individual()
-    nodes, _, _ = gp.graph(expr) #nodes, edges, labels
-    individual.nodes = len(nodes)
-    
-    fitness = raw_fitness + individual.nodes / penalty
-    
-    return fitness,
-
-def fitness_eval4(string_features, individual, points):
-    """Fitness function used for Lexicase selection."""
-    #points = [X, Y]
-    X = points[0]
-    y = points[1]
-    
-    exec(string_features)
-    
-    try:
-#        func = toolbox.compile(expr=individual)
-  #      if problem == 'shuttle':
-        pred = np.array(eval(str(individual))).transpose()
-        #else:
- #       pred = list(map(func, *(X[:, i] for i in range(X.shape[1]))))
-    except (FloatingPointError, ZeroDivisionError, OverflowError,
-            MemoryError):
-        return np.NaN,
-    assert np.isrealobj(pred)
-    
-    fitness = math.sqrt(np.mean(np.square(np.subtract(y, pred))))
-    
-    labels = np.argmax(y, axis=1)
-    labels_pred = np.argmax(pred, axis=1)
-    individual.mce = 1 - np.mean(np.equal(labels, labels_pred)) 
-    
-    individual.fitness_each_sample = np.mean(np.square(y - pred), axis=1)
-    individual.fitness_each_sample = list(individual.fitness_each_sample)
-    
-    individual.behaviour = list(labels_pred) #list of predicted outputs
-    
-    #Calculate the number of nodes
-    expr = toolbox.individual()
-    nodes, _, _ = gp.graph(expr) #nodes, edges, labels
-    individual.nodes = len(nodes)
-    
-    return fitness,
-
-def fitness_eval8(string_features, individual, points):
-    """Fitness function used for plain tournament"""
-    #points = [X, Y]
-    X = points[0]
-    y = points[1]
-    
-    exec(string_features)
-    
-    try:
-        pred = np.array(eval(str(individual))).transpose()
-    except (FloatingPointError, ZeroDivisionError, OverflowError,
-            MemoryError):
-        return np.NaN,
-    assert np.isrealobj(pred)
-    
-    fitness = math.sqrt(np.mean(np.square(np.subtract(y, pred))))
-    
-    labels = np.argmax(y, axis=1)
-    labels_pred = np.argmax(pred, axis=1)
-    individual.mce = 1 - np.mean(np.equal(labels, labels_pred)) 
-    
-    individual.fitness_each_sample = np.mean(np.square(y - pred), axis=1)
-    individual.fitness_each_sample = list(individual.fitness_each_sample)
-    
-    individual.behaviour = list(labels_pred) #list of predicted outputs
-    
-    #Calculate the number of nodes
-    expr = toolbox.individual()
-    nodes, _, _ = gp.graph(expr) #nodes, edges, labels
-    individual.nodes = len(nodes)
-
-    return fitness,
-
-def fitness_eval10(string_features, penalty, individual, points):
-    """Fitness function used for plain tournament with penalised score (number 
-    of nodes divided by the penalty factor).
-    It considers we are minimising the fitness.
-    """
-    #points = [X, Y]
-    X = points[0]
-    y = points[1]
-    
-    exec(string_features)
-    
-    try:
-        pred = np.array(eval(str(individual))).transpose()
-    except (FloatingPointError, ZeroDivisionError, OverflowError,
-            MemoryError):
-        return np.NaN,
-    assert np.isrealobj(pred)
-    
-    raw_fitness = math.sqrt(np.mean(np.square(np.subtract(y, pred))))
-    
-    labels = np.argmax(y, axis=1)
-    labels_pred = np.argmax(pred, axis=1)
-    individual.mce = 1 - np.mean(np.equal(labels, labels_pred)) 
-    
-    individual.fitness_each_sample = np.mean(np.square(y - pred), axis=1)
-    individual.fitness_each_sample = list(individual.fitness_each_sample)
-    
-    individual.behaviour = list(labels_pred) #list of predicted outputs
-    
-    #Calculate the number of nodes
-    expr = toolbox.individual()
-    nodes, _, _ = gp.graph(expr) #nodes, edges, labels
-    individual.nodes = len(nodes)
-    
-    fitness = raw_fitness + individual.nodes / penalty
-    
     return fitness,
 
 def WTA(a, b):
@@ -1098,7 +887,7 @@ def normalise_probs(input_array):
 
 MAX_DEPTH = 17    
 POPULATION_SIZE = 500
-GENERATIONS = 50
+GENERATIONS = 5#0
 TOURNSIZE = 7
 MIN_INIT_DEPTH = 2#3
 MIN_MUT_DEPTH = 0
@@ -1231,169 +1020,12 @@ def create_toolbox(problem, scenario, n_features, RANDOM_SEED):
     if scenario == 0:
         toolbox.register("select", tools.selTournament, tournsize=TOURNSIZE)
         toolbox.register("evaluate", fitness_eval0, string_features)
-    if scenario == 1:
-        toolbox.register("select", tools.selTournament, tournsize=TOURNSIZE)
-        toolbox.register("evaluate", fitness_eval0, string_features)
-    if scenario == 14: #using mad
-        toolbox.register("select", selEpsilonLexi2_nodesCountTies, alpha=1)
-        toolbox.register("evaluate", fitness_eval4, string_features) #not using sqrt in fitness_cases
-    if scenario == 15: #using mad
-        toolbox.register("select", selEpsilonLexi2_nodesCountTies, alpha=1)
-        toolbox.register("evaluate", fitness_eval4, string_features) #not using sqrt in fitness_cases
-    if scenario == 16: #using mad
-        toolbox.register("select", selBatchEpsilonLexi2_nodesCountTies, batch_size=2) #batch=2
-        toolbox.register("evaluate", fitness_eval4, string_features) #not using sqrt in fitness_cases
-    if scenario == 17: #using mad
-        toolbox.register("select", selBatchEpsilonLexi2_nodesCountTies, batch_size=2) #batch=2
-        toolbox.register("evaluate", fitness_eval4, string_features) #not using sqrt in fitness_cases
-    if scenario == 18: #using mad
-        toolbox.register("select", selBatchEpsilonLexi2_nodesCountTies, batch_size=3) #batch=3
-        toolbox.register("evaluate", fitness_eval4, string_features) #not using sqrt in fitness_cases
-    if scenario == 19: #using mad
-        toolbox.register("select", selBatchEpsilonLexi2_nodesCountTies, batch_size=3) #batch=3
-        toolbox.register("evaluate", fitness_eval4, string_features) #not using sqrt in fitness_cases
-    if scenario == 20: #using mad
-        toolbox.register("select", selBatchEpsilonLexi2_nodesCountTies, batch_size=5) #batch=5
-        toolbox.register("evaluate", fitness_eval4, string_features) #not using sqrt in fitness_cases
-    if scenario == 21: #using mad
-        toolbox.register("select", selBatchEpsilonLexi2_nodesCountTies, batch_size=5) #batch=5
-        toolbox.register("evaluate", fitness_eval4, string_features) #not using sqrt in fitness_cases
-    if scenario == 22: #using mad
-        toolbox.register("select", selBatchEpsilonLexi2_nodesCountTies, batch_size=10) #batch=10
-        toolbox.register("evaluate", fitness_eval4, string_features) #not using sqrt in fitness_cases
-    if scenario == 23: #using mad
-        toolbox.register("select", selBatchEpsilonLexi2_nodesCountTies, batch_size=10) #batch=10
-        toolbox.register("evaluate", fitness_eval4, string_features) #not using sqrt in fitness_cases
-    if scenario == 24: #using mad
-        toolbox.register("select", selBatchEpsilonLexi2_nodesCountTies, batch_size=20) #batch=20
-        toolbox.register("evaluate", fitness_eval4, string_features) #not using sqrt in fitness_cases
-    if scenario == 25: #using mad
-        toolbox.register("select", selBatchEpsilonLexi2_nodesCountTies, batch_size=20) #batch=20
-        toolbox.register("evaluate", fitness_eval4, string_features) #not using sqrt in fitness_cases
-    if scenario == 26: #using mad
-        toolbox.register("select", selEpsilonLexicaseCount) 
-        toolbox.register("evaluate", fitness_eval4, string_features) #not using sqrt in fitness_cases
-    if scenario == 27: #using mad
-        toolbox.register("select", selEpsilonLexicaseCount) 
-        toolbox.register("evaluate", fitness_eval4, string_features) #not using sqrt in fitness_cases
-    if scenario == 28:
-        toolbox.register("select", tools.selTournament, tournsize=TOURNSIZE)
-        toolbox.register("evaluate", fitness_eval6, string_features, 1000000) #parsimony 1,000,000
-    if scenario == 29:
-        toolbox.register("select", tools.selTournament, tournsize=TOURNSIZE)
-        toolbox.register("evaluate", fitness_eval6, string_features, 1000000) #parsimony 1,000,000 
-    if scenario == 30:
-        toolbox.register("select", tools.selTournament, tournsize=TOURNSIZE)
-        toolbox.register("evaluate", fitness_eval6, string_features, 100000) #parsimony 100,000
-    if scenario == 31:
-        toolbox.register("select", tools.selTournament, tournsize=TOURNSIZE)
-        toolbox.register("evaluate", fitness_eval6, string_features, 100000) #parsimony 100,000 
-    if scenario == 32:
-        toolbox.register("select", tools.selTournament, tournsize=TOURNSIZE)
-        toolbox.register("evaluate", fitness_eval6, string_features, 10000) #parsimony 10,000
-    if scenario == 33:
-        toolbox.register("select", tools.selTournament, tournsize=TOURNSIZE)
-        toolbox.register("evaluate", fitness_eval6, string_features, 10000) #parsimony 10,000 
-    if scenario == 34:
-        toolbox.register("select", tools.selTournament, tournsize=TOURNSIZE)
-        toolbox.register("evaluate", fitness_eval6, string_features, 1000) #parsimony 1,000
-    if scenario == 35:
-        toolbox.register("select", tools.selTournament, tournsize=TOURNSIZE)
-        toolbox.register("evaluate", fitness_eval6, string_features, 1000) #parsimony 1,000 
-    if scenario == 36:
-        toolbox.register("select", tools.selTournament, tournsize=TOURNSIZE)
-        toolbox.register("evaluate", fitness_eval6, string_features, 500) #parsimony 500
-    if scenario == 37:
-        toolbox.register("select", tools.selTournament, tournsize=TOURNSIZE)
-        toolbox.register("evaluate", fitness_eval6, string_features, 500) #parsimony 500 
-    if scenario == 90: #using 2*mad
-        toolbox.register("select", selEpsilonLexi2_nodesCountTies, alpha=2)
-        toolbox.register("evaluate", fitness_eval4, string_features) #not using sqrt in fitness_cases
-    if scenario == 92: #using 2.5*mad
-        toolbox.register("select", selEpsilonLexi2_nodesCountTies, alpha=2.5)
-        toolbox.register("evaluate", fitness_eval4, string_features) #not using sqrt in fitness_cases
-    if scenario == 94: #using 1.5*mad
-        toolbox.register("select", selEpsilonLexi2_nodesCountTies, alpha=1.5)
-        toolbox.register("evaluate", fitness_eval4, string_features) #not using sqrt in fitness_cases
-    if scenario == 96: #using 0.5*mad
-        toolbox.register("select", selEpsilonLexi2_nodesCountTies, alpha=0.5)
-        toolbox.register("evaluate", fitness_eval4, string_features) #not using sqrt in fitness_cases
-    if scenario == 98: 
-        toolbox.register("select", selDynEpsilonLexi2_nodesCountTies)
-        toolbox.register("evaluate", fitness_eval4, string_features) #not using sqrt in fitness_cases
-    if scenario == 100: #using mad
-        toolbox.register("select", selDynBatchEpsilonLexi2_nodesCountTies, batch_size=2) #batch=2
-        toolbox.register("evaluate", fitness_eval4, string_features) #not using sqrt in fitness_cases
-    if scenario == 102: #using mad
-        toolbox.register("select", selDynBatchEpsilonLexi2_nodesCountTies, batch_size=3) #batch=3
-        toolbox.register("evaluate", fitness_eval4, string_features) #not using sqrt in fitness_cases
-    if scenario == 104: #using mad
-        toolbox.register("select", selDynBatchEpsilonLexi2_nodesCountTies, batch_size=5) #batch=5
-        toolbox.register("evaluate", fitness_eval4, string_features) #not using sqrt in fitness_cases
-    if scenario == 106: #using mad
-        toolbox.register("select", selDynBatchEpsilonLexi2_nodesCountTies, batch_size=10) #batch=10
-        toolbox.register("evaluate", fitness_eval4, string_features) #not using sqrt in fitness_cases
-    if scenario == 108: #using mad
-        toolbox.register("select", selDynBatchEpsilonLexi2_nodesCountTies, batch_size=20) #batch=2
-        toolbox.register("evaluate", fitness_eval4, string_features) #not using sqrt in fitness_cases
-    if scenario == 110: #using mad
-        toolbox.register("select", selBatchEpsilonLexi2_nodesCountTies_MADafter, batch_size=2) #batch=2
-        toolbox.register("evaluate", fitness_eval4, string_features) #not using sqrt in fitness_cases
-    if scenario == 112: #using mad
-        toolbox.register("select", selBatchEpsilonLexi2_nodesCountTies_MADafter, batch_size=3) #batch=3
-        toolbox.register("evaluate", fitness_eval4, string_features) #not using sqrt in fitness_cases
-    if scenario == 114: #using mad
-        toolbox.register("select", selBatchEpsilonLexi2_nodesCountTies_MADafter, batch_size=5) #batch=5
-        toolbox.register("evaluate", fitness_eval4, string_features) #not using sqrt in fitness_cases
-    if scenario == 116: #using mad
-        toolbox.register("select", selBatchEpsilonLexi2_nodesCountTies_MADafter, batch_size=10) #batch=10
-        toolbox.register("evaluate", fitness_eval4, string_features) #not using sqrt in fitness_cases
-    if scenario == 118: #using mad
-        toolbox.register("select", selBatchEpsilonLexi2_nodesCountTies_MADafter, batch_size=20) #batch=20
-        toolbox.register("evaluate", fitness_eval4, string_features) #not using sqrt in fitness_cases
-    if scenario == 120: 
-        toolbox.register("select", selTournamentExtra, tournsize=TOURNSIZE)
-        toolbox.register("evaluate", fitness_eval8, string_features) #not using sqrt in fitness_cases
-    if scenario == 122: 
-        toolbox.register("select", selTournamentExtra, tournsize=TOURNSIZE)
-        toolbox.register("evaluate", fitness_eval10, string_features, 500) #parsimony 500 #not using sqrt in fitness_cases
-        
-        
-
     return toolbox
     
-if scenario <= 1 or scenario == 28 or scenario == 29 or scenario == 30 or scenario == 31 or scenario == 32 or scenario == 33 or scenario == 34 or scenario == 35 or scenario == 36 or scenario == 37:
-    REPORT_ITEMS = ['gen', 'nevals', 'best_train_fitness', 'best_ind_mce', 
+REPORT_ITEMS = ['gen', 'nevals', 'best_train_fitness', 'best_ind_mce', 
                     'avg_mce',
                   'best_ind_depth', 'best_ind_nodes', 'avg_nodes', 'fitness_test', 
                   'accuracy_test', 'best_phenotype', 'behavioural_diversity']
-elif scenario == 26 or scenario == 27: #epsilon-Lexicase
-    REPORT_ITEMS = ['gen', 'nevals', 'best_train_fitness', 'best_ind_mce', 
-                    'avg_mce',
-                  'best_ind_depth', 'best_ind_nodes', 'avg_nodes', 'fitness_test', 
-                  'accuracy_test', 'best_phenotype', 'behavioural_diversity', 
-                  'lexicase_avg_steps']
-elif scenario == 14 or scenario == 15 or scenario == 16 or scenario == 17 or scenario == 18 or scenario == 19 or scenario == 20 or scenario == 21 or scenario == 22 or scenario == 23 or scenario == 24 or scenario == 25 or scenario == 90 or scenario == 92 or scenario == 94 or scenario == 96 or scenario == 98 or scenario == 100 or scenario == 102 or scenario == 104 or scenario == 106 or scenario == 108 or scenario == 110 or scenario == 112 or scenario == 114 or scenario == 116 or scenario == 118: #epsilon-Lexi2
-    REPORT_ITEMS = ['gen', 'nevals', 'best_train_fitness', 'best_ind_mce', 
-                    'avg_mce',
-                  'best_ind_depth', 'best_ind_nodes', 'avg_nodes', 'fitness_test', 
-                  'accuracy_test', 'best_phenotype', 'behavioural_diversity', 
-                  'lexicase_avg_steps', 'lexicase_avg_ties_chosen_ind',
-                  'avg_zeros',
-                  'avg_epsilon',
-                  'variance',
-                  'unique_selected',
-                  'behavioural_diversity_fitness_cases']
-elif scenario == 120 or scenario == 122:
-    REPORT_ITEMS = ['gen', 'nevals', 'best_train_fitness', 'best_ind_mce', 
-                    'avg_mce',
-                  'best_ind_depth', 'best_ind_nodes', 'avg_nodes', 'fitness_test', 
-                  'accuracy_test', 'best_phenotype', 'behavioural_diversity',
-                  'avg_zeros',
-                  'avg_epsilon',
-                  'variance',
-                  'unique_selected',
-                  'behavioural_diversity_fitness_cases']
 
 for i in range(N_RUNS):
     print()
@@ -1404,7 +1036,7 @@ for i in range(N_RUNS):
     RANDOM_SEED = i + run
     
     np.random.seed(RANDOM_SEED)
-    X_train, Y_train, X_test, Y_test = setDataSet(problem, RANDOM_SEED, FUZZY_SETS) #We set up this inside the loop for the case in which the data is defined randomly
+    X_train, Y_train, X_test, Y_test, fuzzy_columns = setDataSet(problem, RANDOM_SEED, FUZZY_SETS) #We set up this inside the loop for the case in which the data is defined randomly
     
     n_features = X_train.shape[1]
     print(n_features)
@@ -1434,6 +1066,9 @@ for i in range(N_RUNS):
     
     print("fitness test = ", fitness_test[-1])
     
+    phenotype = replace_substrings(str(hof.items[0]), fuzzy_columns)
+    print(phenotype)
+    
     best_phenotype = [float('nan')] * GENERATIONS
     best_phenotype.append(hof.items[0])
     
@@ -1452,7 +1087,7 @@ for i in range(N_RUNS):
        # Create a new directory because it does not exist
        os.makedirs(address)
     
-    if scenario <= 1 or scenario == 28 or scenario == 29 or scenario == 30 or scenario == 31 or scenario == 32 or scenario == 33 or scenario == 34 or scenario == 35 or scenario == 36 or scenario == 37:
+    if scenario == 0:
         with open(address + str(r) + ".csv", "w", encoding='UTF8', newline='') as csvfile:
             writer = csv.writer(csvfile, delimiter='\t')
             writer.writerow(header)
@@ -1470,85 +1105,5 @@ for i in range(N_RUNS):
                                  best_phenotype[value],
                                  behavioural_diversity[value]
                                  ])
-    elif scenario == 14 or scenario == 15 or scenario == 16 or scenario == 17 or scenario == 18 or scenario == 19 or scenario == 20 or scenario == 21 or scenario == 22 or scenario == 23 or scenario == 24 or scenario == 25 or scenario == 90 or scenario == 92 or scenario == 94 or scenario == 96 or scenario == 98 or scenario == 100 or scenario == 102 or scenario == 104 or scenario == 106 or scenario == 108 or scenario == 110 or scenario == 112 or scenario == 114 or scenario == 116 or scenario == 118: #epsilon-Lexi2
-        lexicase_avg_steps = logbook.select("lexicase_avg_steps")
-        lexicase_avg_ties_chosen_ind = logbook.select("lexicase_avg_ties_chosen_ind")
-        avg_zeros = logbook.select("avg_zeros")
-        avg_epsilon = logbook.select("avg_epsilon")
-        variance = logbook.select("variance")
-        unique_selected = logbook.select("unique_selected")
-        behavioural_diversity_fitness_cases = logbook.select("behavioural_diversity_fitness_cases")
-        with open(address + str(r) + ".csv", "w", encoding='UTF8', newline='') as csvfile:
-            writer = csv.writer(csvfile, delimiter='\t')
-            writer.writerow(header)
-            for value in range(len(gen)):
-                writer.writerow([gen[value], 
-                                 nevals[value], 
-                                 best_train_fitness[value], 
-                                 best_ind_mce[value], 
-                                 avg_mce[value],
-                                 best_ind_depth[value], 
-                                 best_ind_nodes[value], 
-                                 avg_nodes[value], 
-                                 fitness_test[value],
-                                 accuracy_test[value],
-                                 best_phenotype[value],
-                                 behavioural_diversity[value],
-                                 lexicase_avg_steps[value],
-                                 lexicase_avg_ties_chosen_ind[value],
-                                 avg_zeros[value],
-                                 avg_epsilon[value],
-                                 variance[value],
-                                 unique_selected[value],
-                                 behavioural_diversity_fitness_cases[value]
-                                 ])
-    elif scenario == 26 or scenario == 27: #epsilon-Lexicase
-        lexicase_avg_steps = logbook.select("lexicase_avg_steps")
-        with open(address + str(r) + ".csv", "w", encoding='UTF8', newline='') as csvfile:
-            writer = csv.writer(csvfile, delimiter='\t')
-            writer.writerow(header)
-            for value in range(len(gen)):
-                writer.writerow([gen[value], 
-                                 nevals[value], 
-                                 best_train_fitness[value], 
-                                 best_ind_mce[value], 
-                                 avg_mce[value],
-                                 best_ind_depth[value], 
-                                 best_ind_nodes[value], 
-                                 avg_nodes[value], 
-                                 fitness_test[value],
-                                 accuracy_test[value],
-                                 best_phenotype[value],
-                                 behavioural_diversity[value],
-                                 lexicase_avg_steps[value]
-                                 ])
-    elif scenario == 120 or scenario == 122:
-        behavioural_diversity_fitness_cases = logbook.select("behavioural_diversity_fitness_cases")
-        avg_zeros = logbook.select("avg_zeros")
-        avg_epsilon = logbook.select("avg_epsilon")
-        variance = logbook.select("variance")
-        unique_selected = logbook.select("unique_selected")
-        with open(address + str(r) + ".csv", "w", encoding='UTF8', newline='') as csvfile:
-            writer = csv.writer(csvfile, delimiter='\t')
-            writer.writerow(header)
-            for value in range(len(gen)):
-                writer.writerow([gen[value], 
-                                 nevals[value], 
-                                 best_train_fitness[value], 
-                                 best_ind_mce[value], 
-                                 avg_mce[value],
-                                 best_ind_depth[value], 
-                                 best_ind_nodes[value], 
-                                 avg_nodes[value], 
-                                 fitness_test[value],
-                                 accuracy_test[value],
-                                 best_phenotype[value],
-                                 behavioural_diversity[value],
-                                 avg_zeros[value],
-                                 avg_epsilon[value],
-                                 variance[value],
-                                 unique_selected[value],
-                                 behavioural_diversity_fitness_cases[value]
-                                 ])        
     else:
         raise ValueError("The scenario was not registered.")
