@@ -4,9 +4,7 @@ from deap import tools, gp
 import math
 import numpy as np
 
-from functions import shuffle_rows_except_first, remove_row, add_index_column, remove_columns, aggregate_rows, represent_matrix_behaviour, remove_equal_rows, remove_equal_columns, find_equal_columns, remove_columns_with_different_value, aggregate_rows_sum, count_zeros_except_first_row, count_zeros
-
-from grape import median_abs_deviation
+from functions import shuffle_rows_except_first, remove_row, add_index_column, remove_columns, aggregate_rows, represent_matrix_behaviour, remove_equal_rows, remove_equal_columns, find_equal_columns, remove_columns_with_different_value, aggregate_rows_sum, count_zeros_except_first_row, count_zeros, median_abs_deviation
 import statistics
 
 def varAnd(population, toolbox, cxpb, mutpb):
@@ -140,9 +138,7 @@ def eaSimple(population, toolbox, cxpb, mutpb, ngen, points_train,
         best_ind_mce = halloffame.items[0].mce
         best_ind_depth = halloffame.items[0].height
         best_ind_nodes = len(halloffame.items[0])
-        print("gen =", 0, ", fitness =", best_train_fitness, ", MCE =", best_ind_mce, ", evals =", n_evals, 
-              ", depth =", best_ind_depth, ", nodes =", best_ind_nodes, 
-              ', behavioural_diversity =', behavioural_diversity)
+        print("gen =", 0, ", fitness =", best_train_fitness, ", MCE =", best_ind_mce, ", evals =", n_evals)
         
     fitness_test = np.NaN
     
@@ -234,9 +230,7 @@ def eaSimple(population, toolbox, cxpb, mutpb, ngen, points_train,
             best_ind_mce = halloffame.items[0].mce
             best_ind_depth = halloffame.items[0].height
             best_ind_nodes = len(halloffame.items[0])
-            print("gen =", gen, ", fitness =", best_train_fitness, ", MCE =", best_ind_mce, ", evals =", n_evals, 
-                  ", depth =", best_ind_depth, ", nodes =", best_ind_nodes, 
-                  ', behavioural_diversity =', behavioural_diversity_fitness_cases)
+            print("gen =", gen, ", fitness =", best_train_fitness, ", MCE =", best_ind_mce, ", evals =", n_evals)
             
         if points_test:
             if gen < ngen:
