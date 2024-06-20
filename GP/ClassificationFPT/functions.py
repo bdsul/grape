@@ -1,6 +1,36 @@
 import random
 import numpy as np
 import math
+import re
+
+def replace_substrings(input_string, replacements):
+    # Function to replace matched pattern with corresponding list value
+    def replacer(match):
+        index = int(match.group(1))  # Extract the number after 'IN'
+        return replacements[index]   # Return the corresponding list value
+
+    # Regular expression to find patterns like 'IN0', 'IN1', etc.
+    pattern = r'IN(\d+)'
+
+    # Replace all occurrences of the pattern in the input string
+    result = re.sub(pattern, replacer, input_string)
+
+    return result
+
+def median_abs_deviation(arr, axis=0):
+    if not isinstance(arr, np.ndarray):
+        raise ValueError("Input must be a NumPy array.")
+
+    # Calculate the median along axis 0
+    median = np.median(arr, axis=0)
+
+    # Calculate the absolute deviations from the median along axis 0
+    abs_deviations = np.abs(arr - median)
+
+    # Calculate the median of the absolute deviations along axis 0
+    mad = np.median(abs_deviations, axis=0)
+
+    return mad
 
 def count_zeros_except_first_row(array):
     # Exclude the first row
