@@ -42,8 +42,8 @@ toolbox.register("mate", grape.crossover_onepoint)
 toolbox.register("mutate", grape.mutation_int_flip_per_codon)
 
 POPULATION_SIZE = 10
-MAX_INIT_TREE_DEPTH = 13
-MIN_INIT_TREE_DEPTH = 2
+MAX_INIT_TREE_DEPTH = 6
+MIN_INIT_TREE_DEPTH = 4
 
 MAX_GENERATIONS = 200
 P_CROSSOVER = 0.8
